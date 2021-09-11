@@ -1,0 +1,4 @@
+figures.do (text/x-stata-syntax; charset=US-ASCII) 4178 bytes.
+results.do (text/x-stata-syntax; charset=US-ASCII) 2298 bytes.
+robustness.do (text/x-stata-syntax; charset=US-ASCII) 38797 bytes.
+sechser-saunders-ISQ-2010.tab (text/tab-separated-values) 496060 bytes.
