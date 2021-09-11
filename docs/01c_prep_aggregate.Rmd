@@ -1,0 +1,94 @@
+---
+title: "01c IISS Aggregated"
+author: "J Andres Gannon"
+date: "03/24/18"
+output:
+  html_notebook:
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+editor_options:
+  chunk_output_type: inline
+---
+<style>
+    body .main-container {
+        max-width: 100%;
+    }
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This document pulls the cleaned long-form data from 01b and aggregates it to the equipment_name level. 
+
+# Set up
+```{r}
+library(magrittr)
+library(tidyverse)
+```
+
+# Load raw IISS data 
+```{r}
+iiss <- readRDS(paste0(here::here(), "/data/","01b_clean.rds"))
+```
+
+# Aggregate unit_count to the equipment_name level
+```{r}
+safe <- iiss 
+iiss <- safe
+
+# Create tek column
+tek_names <- c('equipment_type', 'equipment_subtype', 'equipment_name')
+iiss$tek <- apply(iiss[ , tek_names], 1, paste, collapse = "_")
+
+# Aggregate counts to triple level (equipment_type-equipment_subtype-equipment_name)
+iiss_long_aggregated <- iiss %>%
+  dplyr::group_by(country, 
+                  year,
+                  tek,
+                  equipment_type, 
+                  equipment_subtype, 
+                  equipment_name) %>% 
+  dplyr::summarize(unit_count = sum(unit_count, na.rm = TRUE))
+
+dim(iiss_long_aggregated)
+```
+
+# Minor cleaning
+```{r}
+# If a country-year's unit_count sum is 0 (only have NAs) then we drop that country-year because it hasn't been done yet
+narrow <- iiss_long_aggregated %>% dplyr::group_by(country, year) %>%
+  dplyr::summarize(tek_total = sum(unit_count, na.rm = TRUE)) %>%
+  dplyr::filter(!is.na(tek_total))
+
+iiss_long_aggregated <- dplyr::left_join(iiss_long_aggregated, narrow)
+
+# If tek_total is 0, drop the row because it means that country-year hasn't been entered yet
+iiss_long_aggregated <- subset(iiss_long_aggregated, tek_total > 0)
+
+# If all 3 of the tek columns are NA, then unit count is 0
+iiss_long_aggregated$unit_count[is.na(iiss_long_aggregated$equipment_type) & is.na(iiss_long_aggregated$equipment_subtype) & is.na(iiss_long_aggregated$equipment_name)] <- 0
+
+# Drop tek count column
+iiss_long_aggregated$tek_total <- NULL
+
+# Split tek triple into the 3 columns
+iiss_long_aggregated$equipment_type <- iiss_long_aggregated$equipment_subtype <- iiss_long_aggregated$equipment_name <- NULL
+
+iiss_long_aggregated <- tidyr::separate(iiss_long_aggregated, tek, c("equipment_type", "equipment_subtype", "equipment_name"), sep = "_", remove = FALSE)
+```
+
+# Save data
+```{r}
+saveRDS(iiss_long_aggregated, paste0(here::here(), "/data/","01c_aggreg.rds"))
+```
+
+# System info
+```{r}
+sessionInfo()
+```

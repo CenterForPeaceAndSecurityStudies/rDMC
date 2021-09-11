@@ -1,0 +1,540 @@
+---
+title: "03 TechnologyTrees"
+author: "J Andres Gannon"
+date: "February 5, 2018"
+site: bookdown::bookdown_site
+output:
+  bookdown::html_notebook2:
+    fig_height: 8
+    fig_width: 12
+    number_sections: yes
+    code_folding: hide
+    theme: flatly
+    toc: yes
+    toc_depth: 5
+    toc_float:
+      collapsed: yes
+  html_document:
+    theme: flatly
+    code_download: true
+    toc: yes
+  html_notebook:
+    toc: yes
+    toc_float: yes
+editor_options:
+  chunk_output_type: inline
+---
+
+This document visualizes the nested technology categorizations in the newly created data for the dependent variable; a state's distribution of military capabilities. For every country-year, the data has a count at the most disaggregated level that can then be aggregated as needed.
+
+```{r setup, include = FALSE}
+rm(list=ls())
+
+library(magrittr)
+library(ggplot2)
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+```
+
+# Raw data
+## Load and clean
+First create a tek tree for how the tek categories look using the raw IISS categorizations. All that has been cleared here are typos or coder data entry errors. We exclude the unit names since it would make the tree unmanageable and includes inconsistent information
+```{r}
+# Load
+df_raw <- readRDS(paste0(here::here(), "/data/", "01z_rDMC_raw.rds"))
+
+df_raw <- df_raw %>%
+  dplyr::select(dplyr::starts_with("equipment_")) %>%
+  tidyr::replace_na(list(equipment_subtype = "NA_subtype",
+                         equipment_name = "NA_name")) %>%
+  dplyr::distinct()
+```
+
+## Trees
+### Full tree
+This tree shows the equipment categorizations using the columns for equipment type, subtype, name, and subname.
+```{r}
+df_raw %>% collapsibleTree::collapsibleTree(hierarchy = c("equipment_type", 
+                                                          "equipment_subtype", 
+                                                          "equipment_name", 
+                                                          "equipment_subname"), 
+                                   height = 40000, width = 1000, 
+                                   root = "tek",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Air defence
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "air defence") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_subtype",
+                                                 "equipment_name",
+                                                 "equipment_subname"),
+                                   height = 600, width = 600,
+                                   root = "air defence",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Air-launched missiles
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "air-launched missiles") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_subtype",
+                                                 "equipment_name",
+                                                 "equipment_subname"),
+                                   height = 800, width = 600,
+                                   root = "air-launched missiles",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+
+### Aircraft
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "aircraft") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_name",
+                                                 "equipment_subname"),
+                                   height = 4000, width = 800,
+                                   root = "aircraft",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Amphibious
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "amphibious") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_subtype",
+                                                 "equipment_name"),
+                                   height = 1000, width = 600,
+                                   root = "amphibious",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Anti-tank/anti-infrastructure
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "anti-tank/anti-infrastructure") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_subtype",
+                                                 "equipment_name",
+                                                 "equipment_subname"),
+                                   height = 2000, width = 800,
+                                   root = "anti-tank/anti-infrastructure",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Armoured fighting vehicles
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "armoured fighting vehicles") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_name",
+                                                 "equipment_subname"),
+                                   height = 1000, width = 600,
+                                   root = "armoured fighting vehicles",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Ballistic missiles
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "ballistic missiles") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_name",
+                                                 "equipment_subname"),
+                                   height = 400, width = 500,
+                                   root = "ballistic missiles",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Bombs
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "bombs") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_name",
+                                                 "equipment_subname"),
+                                   height = 300, width = 300,
+                                   root = "bombs",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Engineering and maintenance
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "engineering and maintenance vehicles") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_name",
+                                                 "equipment_subname"),
+                                   height = 200, width = 350,
+                                   root = "engineering and maintenance vehicles",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Helicopters
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "helicopters") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_name",
+                                                 "equipment_subname"),
+                                   height = 2000, width = 400,
+                                   root = "helicopters",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Logistics and support
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "logistics and support") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_name",
+                                                 "equipment_subname"),
+                                   height = 3000, width = 800,
+                                   root = "logistics and support",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Mine warfare
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "mine warfare") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_subtype",
+                                                 "equipment_name",
+                                                 "equipment_subname"),
+                                   height = 1000, width = 800,
+                                   root = "mine warfare",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Patrol and coastal combatants
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "patrol and coastal combatants") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_subtype",
+                                                 "equipment_name",
+                                                 "equipment_subname"),
+                                   height = 3000, width = 800,
+                                   root = "patrol and coastal combatants",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Principal surface combatants
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "principal surface combatants") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_subtype",
+                                                 "equipment_name",
+                                                 "equipment_subname"),
+                                   height = 1000, width = 400,
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Radars
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "radars") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_subtype",
+                                                 "equipment_name",
+                                                 "equipment_subname"),
+                                   height = 1200, width = 900,
+                                   root = "radars",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Submarines
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "submarines") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_name",
+                                                 "equipment_subname"),
+                                   height = 1000, width = 400,
+                                   root = "submarines",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### Surface-to-surface missile launchers
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "surface-to-surface missile launchers") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_subtype",
+                                                 "equipment_name",
+                                                 "equipment_subname"),
+                                   height = 1000, width = 800,
+                                   root = "surface-to-surface missile launchers",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+### UAVs
+```{r}
+df_raw %>%
+  dplyr::filter(equipment_type == "unmanned aerial vehicles") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("equipment_name",
+                                                 "equipment_subname"),
+                                   height = 600, width = 400,
+                                   root = "unmanned aerial vehicles",
+                                   collapse = FALSE, zoomable = FALSE)
+```
+
+# Cleaned data
+## Load and clean
+We then load the cleaned IISS data. This dataframe contains information about the count of military units at the country-year level. They have been aggregated and re-categorized based on equipment similarity and official national categorizations. All subjective categorization is done in 01d_prepIISS_subjective.Rmd
+```{r}
+# Load data
+df <- readRDS(file = paste0(here::here(), '/data/01z_rDMC_long.rds'))
+
+# Prep for tree format by creating two-level columns
+df <- df %>% 
+  dplyr::select(tek) %>%
+  tidyr::separate(tek, c("parent", "child"), sep = "_", remove = TRUE) %>%
+  dplyr::distinct()
+
+df$child[df$child == "all"] <- NA
+df$child[df$child == "NA"] <- NA
+```
+
+## Tree
+This shows tree for the new equipment categorizations. There are now two standardized levels for every equipment category
+
+### Parent nodes
+```{r}
+df_parent <- df %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("parent", "child"),
+                                   height = 500, width = 600,
+                                   root = "tek",
+                                   collapse = TRUE, zoomable = FALSE)
+df_parent
+htmltools::save_html(df_parent, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_parent.html"))
+```
+
+### Air defence
+```{r}
+df_ad <- df %>%
+  dplyr::filter(parent == "air defence") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 200, width = 400,
+                                   root = "air defence",
+                                   collapse = TRUE, zoomable = FALSE)
+df_ad
+htmltools::save_html(df_ad, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_ad.html"))
+```
+
+### Aircraft
+```{r}
+df_aircraft <- df %>%
+  dplyr::filter(parent == "aircraft") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 400, width = 400,
+                                   root = "aircraft",
+                                   collapse = TRUE, zoomable = FALSE)
+df_aircraft
+htmltools::save_html(df_ad, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_aircraft.html"))
+```
+
+### Amphibious
+```{r}
+df_amph <- df %>%
+  dplyr::filter(parent == "amphibious") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 200, width = 400,
+                                   root = "amphibious",
+                                   collapse = TRUE, zoomable = FALSE)
+df_amph
+htmltools::save_html(df_amph, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_amph.html"))
+```
+
+### Anti-tank/anti-infrastructure
+```{r}
+df_atai <- df %>%
+  dplyr::filter(parent == "anti-tank/anti-infrastructure") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 200, width = 400,
+                                   root = "anti-tank/anti-infrastructure",
+                                   collapse = TRUE, zoomable = FALSE)
+df_atai
+htmltools::save_html(df_atai, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_atai.html"))
+```
+
+### Armoured fighting vehicles
+```{r}
+df_afv <- df %>%
+  dplyr::filter(parent == "armoured fighting vehicles") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 200, width = 400,
+                                   root = "armoured fighting vehicles",
+                                   collapse = TRUE, zoomable = FALSE)
+df_afv
+htmltools::save_html(df_amph, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_afv.html"))
+```
+
+### Ballistic missiles
+```{r}
+df_ball <- df %>%
+  dplyr::filter(parent == "ballistic missiles") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 200, width = 400,
+                                   root = "ballistic missiles",
+                                   collapse = TRUE, zoomable = FALSE)
+df_ball
+htmltools::save_html(df_ball, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_ball.html"))
+```
+
+### Helicopters
+```{r}
+df_hel <- df %>%
+  dplyr::filter(parent == "helicopters") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 200, width = 400,
+                                   root = "helicopters",
+                                   collapse = TRUE, zoomable = FALSE)
+df_hel
+htmltools::save_html(df_hel, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_hel.html"))
+```
+
+### Land/sea defence
+```{r}
+df_lsd <- df %>%
+  dplyr::filter(parent == "land/sea defence") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 200, width = 500,
+                                   root = "land/sea defence",
+                                   collapse = TRUE, zoomable = FALSE)
+df_lsd
+htmltools::save_html(df_lsd, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_lsd.html"))
+```
+
+### Logistics and support
+```{r}
+df_log <- df %>%
+  dplyr::filter(parent == "logistics and support") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 300, width = 500,
+                                   root = "logistics and support",
+                                   collapse = TRUE, zoomable = FALSE)
+df_log
+htmltools::save_html(df_log, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_log.html"))
+```
+
+### Mine warfare
+```{r}
+df_mine <- df %>%
+  dplyr::filter(parent == "mine warfare") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 100, width = 400,
+                                   root = "amphibious",
+                                   collapse = TRUE, zoomable = FALSE)
+df_mine
+htmltools::save_html(df_mine, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_mine.html"))
+```
+
+### Patrol and coastal combatants
+```{r}
+df_pcc <- df %>%
+  dplyr::filter(parent == "patrol and coastal combatants") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 200, width = 400,
+                                   root = "patrol and coastal combatants",
+                                   collapse = TRUE, zoomable = FALSE)
+df_pcc
+htmltools::save_html(df_pcc, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_pcc.html"))
+```
+
+### Principal surface combatants
+```{r}
+df_psc <- df %>%
+  dplyr::filter(parent == "principal surface combatants") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 200, width = 400,
+                                   root = "principal surface combatants",
+                                   collapse = TRUE, zoomable = FALSE)
+df_psc
+htmltools::save_html(df_psc, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_psc.html"))
+```
+
+### Radars
+```{r}
+df_radars <- df %>%
+  dplyr::filter(parent == "radars") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 200, width = 400,
+                                   root = "radars",
+                                   collapse = TRUE, zoomable = FALSE)
+df_radars
+htmltools::save_html(df_radars, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_radars.html"))
+```
+
+### Submarines
+```{r}
+df_subs <- df %>%
+  dplyr::filter(parent == "submarines") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 200, width = 400,
+                                   root = "submarines",
+                                   collapse = TRUE, zoomable = FALSE)
+df_subs
+htmltools::save_html(df_subs, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_subs.html"))
+```
+
+### UAVs
+```{r}
+df_uav <- df %>%
+  dplyr::filter(parent == "unmanned aerial vehicles") %>%
+  dplyr::mutate(fake = "fake") %>%
+  collapsibleTree::collapsibleTree(hierarchy = c("child", "fake"),
+                                   height = 200, width = 400,
+                                   root = "unmanned aerial vehicles",
+                                   collapse = TRUE, zoomable = FALSE)
+df_uav
+htmltools::save_html(df_uav, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_uav.html"))
+```
+
+## Radial tree
+Alternate version that may fit better on a single page and experiment with a radial layout
+```{r}
+## Copy df
+df_radial <- df
+
+## Shorten names for plot aesthetics
+df_radial$parent[df_radial$parent == "anti-tank/anti-infrastructure"] <- "anti-tank/infra."
+df_radial$parent[df_radial$parent == "armoured fighting vehicles"] <- "armored vehicles"
+df_radial$parent[df_radial$parent == "logistics and support"] <- "naval logistics"
+df_radial$parent[df_radial$parent == "patrol and coastal combatants"] <- "patrol/coastal ships"
+df_radial$parent[df_radial$parent == "principal surface combatants"] <- "principal surface ships"
+df_radial$parent[df_radial$parent == "unmanned aerial vehicles"] <- "UAVs"
+
+## Need a root node of "tek" that is the parent to the actual tek parents
+parents <- data.frame(unique(df_radial$parent)) %>%
+  dplyr::rename(child = unique.df_radial.parent.)
+parents$parent <- "tek"
+df_radial <- rbind(df_radial, parents)
+
+# Make data hierarchical
+df_radial <- data.tree::FromDataFrameNetwork(df_radial)
+df_radial <- data.tree::ToListExplicit(df_radial, unname = TRUE)
+
+df_diag <- networkD3::diagonalNetwork(df_radial,
+                           height = 1200, width = 400,
+                           fontSize = 14,
+                           margin = NULL)
+df_diag
+htmltools::save_html(df_diag, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_full.html"))
+
+df_radial <- networkD3::radialNetwork(df_radial,
+                           fontSize = 14,
+                           margin = NULL)
+df_radial
+htmltools::save_html(df_radial, paste0(here::here(), "/paper/figures/equipment_types/", file = "dendrogram_subjective_radial.html"))
+
+```
+
+# System info
+```{r}
+Sys.info()
+```

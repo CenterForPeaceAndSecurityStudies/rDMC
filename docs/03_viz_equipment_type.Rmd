@@ -1,0 +1,140 @@
+---
+title: "Equipment types"
+author: "Andres Gannon"
+date: "April 6, 2019"
+output:
+  html_document:
+    toc: yes
+  html_notebook:
+    toc: yes
+    toc_float: yes
+editor_options:
+  chunk_output_type: inline
+---
+<style>
+    body .main-container {
+        max-width: 100%;
+    }
+</style>
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Set up
+```{r, results='hide', message=FALSE, warning=FALSE, include=FALSE}
+library(magrittr)
+library(tidyverse)
+
+source(paste0(here::here(), "/R/time_series_baltics.R"))
+
+source(paste0(here::here(), "/R/graph_countrypolar.R"))
+source(paste0(here::here(), "/R/graph_countrypolar_gif.R"))
+
+source(paste0(here::here(), "/R/histogram.R"))
+
+source(paste0(here::here(), "/R/overall_ratio_boxplot.R"))
+source(paste0(here::here(), "/R/overall_ratio_boxplot_facet.R"))
+
+source(paste0(here::here(), "/R/portfolio_relative_brailey.R"))
+
+source(paste0(here::here(), "/R/plot_countryyear.R"))
+
+source(paste0(here::here(), "/R/tek_invention_plot.R"))
+
+source(paste0(here::here(), "/R/comparative_spider_plots.R"))
+
+source(paste0(here::here(), "/R/radar_plots.R"))
+source(paste0(here::here(), "/R/ratio_boxplot.R"))
+
+source(paste0(here::here(), "/R/ratio_spiderplot.R"))
+source(paste0(here::here(), "/R/ratio_spiderplot_scaled.R"))
+source(paste0(here::here(), "/R/ratio_spiderplot_scaled_fullportfolio.R"))
+
+source(paste0(here::here(), "/R/xcountry_equip_diversity_boxplot.R"))
+source(paste0(here::here(), "/R/xcountry_boxplot.R"))
+
+source(paste0(here::here(), "/R/equip_count_tables.R"))
+source(paste0(here::here(), "/R/equipment_table_time_series.R"))
+
+source(paste0(here::here(), "/R/per_yearTable.R"))
+
+source(paste0(here::here(), "/R/table_countryyear.R"))
+source(paste0(here::here(), "/R/table_crosssection.R"))
+source(paste0(here::here(), "/R/table_timeseries.R"))
+
+source(paste0(here::here(), "/R/ratio_table.R"))
+source(paste0(here::here(), "/R/ratio_subtype_table.R"))
+
+source(paste0(here::here(), "/R/naval_tonnage_plots.R"))
+
+source(paste0(here::here(), "/R/multilevel_network.R"))
+```
+
+```{r}
+time_series_raw(iiss, baltic_states, 2001, 2017, "armoured fighting vehicles")
+```
+
+```{r}
+time_series_pct(iiss, baltic_states, 2001, 2017, "armoured fighting vehicles")
+```
+
+```{r}
+# Example using a equipment_type subset
+us <- c("us")
+
+time_series_raw(iiss, us, 2001, 2017, "armoured fighting vehicles", tanks)
+```
+
+```{r, include = F}
+# Baltic States
+time_series_raw(iiss, baltic_states, 2001, 2017, "armoured fighting vehicles")
+time_series_pct(iiss, baltic_states, 2001, 2017, "armoured fighting vehicles")
+
+time_series_raw(iiss, baltic_states, 2001, 2017, "air defence")
+time_series_pct(iiss, baltic_states, 2001, 2017, "air defence")
+
+time_series_raw(iiss, baltic_states, 2001, 2017, "artillery")
+time_series_pct(iiss, baltic_states, 2001, 2017, "artillery")
+
+time_series_raw(iiss, baltic_states, 2001, 2017, "anti-tank/anti-infrastructure")
+time_series_pct(iiss, baltic_states, 2001, 2017, "anti-tank/anti-infrastructure")
+
+time_series_raw(iiss, baltic_states, 2001, 2017, "aircraft")
+time_series_pct(iiss, baltic_states, 2001, 2017, "aircraft")
+
+time_series_raw(iiss, baltic_states, 2001, 2017, "patrol and coastal combatants")
+time_series_raw(iiss, baltic_states, 2001, 2017, "mine warfare")
+```
+
+```{r}
+# time_series() is an older version of the functions found in time_series_baltics.R
+time_series(iiss, "us", "armoured fighting vehicles", 1991, 2001)
+```
+
+```{r}
+# smooth_time_series() is an older version of the functions found in time_series_baltics.R
+smooth_time_series(iiss, "us", "armoured fighting vehicles", 1991, 2001)
+```
+
+# Comparative spider plots
+```{r}
+# specify country groupings
+
+comp_spider_plots(my_sub = c("France", "Japan"), my_year = 2014, compare = T)
+```
+
+```{r}
+comp_spider_plots(my_sub = c("United States"), my_year = 2014)
+```
+
+```{r}
+# Get new nato members subset 
+nato <- readRDS(paste0(here::here(), "/data/NATO_membership.rds")) %>% 
+  dplyr::filter(join_nato_year >= 1991) %>% 
+  dplyr::pull(state)
+
+comp_spider_plots(my_sub = nato, my_year = 2014, compare = T)
+```

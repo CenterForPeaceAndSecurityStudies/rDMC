@@ -1,0 +1,1575 @@
+---
+title: "Post-Cleaned IISS Visualizations"
+author: "J Andres Gannon"
+date: "03/24/18"
+output:
+  html_notebook:
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+editor_options:
+  chunk_output_type: inline
+---
+<style>
+    body .main-container {
+        max-width: 100%;
+    }
+</style>
+
+# Load Library
+```{r , results='hide', message=FALSE, warning=FALSE, include=FALSE}
+# Reset workspace
+rm(list = ls())
+
+# Memory saver
+gc()
+
+# Load essential packages
+library(magrittr)
+library(ggplot2)
+library(ggalt)
+library(data.table)
+library(DescTools)
+library(dplyr)
+library(lares)
+library(ggradar)
+library(ggiraphExtra)
+library(kableExtra)
+library(tidyverse)
+
+# Source functions
+source(paste0(here::here(), "/R/missingness_df.R"))
+source(paste0(here::here(), "/R/parentchild.R"))
+source(paste0(here::here(), "/R/equip_domain.R"))
+source(paste0(here::here(), "/R/country_year_equip_df.R"))
+source(paste0(here::here(), "/R/iiss_wrangling_function.R"))
+
+# Aesthetics
+knitr::opts_knit$set(progress = TRUE, verbose = TRUE)
+knitr::opts_chunk$set(fig.width = 12, fig.height = 8, warning = FALSE, message = FALSE, cache = TRUE)
+options(width = 160)
+```
+
+# Load cleaned data
+```{r}
+iiss <- readRDS(file = paste0(here::here(), "/data/01z_rDMC_long.rds"))
+```
+
+# Summary stats to show data coverage and missingness
+```{r echo = FALSE}
+# Show missing values
+DataExplorer::plot_missing(iiss)
+
+# Show categorical frequency of discrete variables
+#DataExplorer::plot_bar(iiss)
+
+# Show distribution of continuous variables
+DataExplorer::plot_histogram(iiss)
+
+# Missingness plot for technologies
+iiss_supp <- googlesheets4::read_sheet('1yf-dGAiicIGNScouedvOCET4s34GGl3OelXrgOPWq8g')
+iiss_tek <- googlesheets4::read_sheet('1yf-dGAiicIGNScouedvOCET4s34GGl3OelXrgOPWq8g', sheet = "iiss_platforms")
+
+iiss_tek %>%
+  dplyr::filter(year >= 1970 &
+                  year <= 2014) %>%
+  ggplot2::ggplot(aes(x = year)) +
+  geom_line(aes(y = iiss_platform_abbrev), size = 2) +
+  scale_x_continuous(breaks = seq(1970, 2015, by = 5)) +
+  theme_bw() + theme(panel.border = element_blank(),
+                     panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     axis.line = element_line(colour = "black"),
+                     axis.text.y = element_blank()) +
+  labs(title = "IISS Technology Observations per Year",
+       x = "Year",
+       y = "Tek",
+       yShowTickLabel = FALSE)
+```
+
+```{r}
+# Missingness plot for countries
+iiss_country <- googlesheets4::read_sheet('1yf-dGAiicIGNScouedvOCET4s34GGl3OelXrgOPWq8g', sheet = "iiss_countries")
+
+# Basic
+ggplot2::ggplot(iiss_country, aes(x = year)) +
+  geom_line(aes(y = ccode_name), size = 2) +
+  scale_x_continuous(breaks = seq(1960, 2017, by = 5)) +
+  theme_bw() + 
+  theme(panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "black"), 
+        axis.text.y = element_blank()) +
+  labs(title = "IISS Country Observations per Year", x = "Year", y = "Country", yShowTickLabel = FALSE)
+
+# Country data missingness plot.
+missingness <- missingness_df()
+
+Country <- missingness$country
+Year <- missingness$year
+Value <- missingness$value
+
+missingness$continent <- countrycode::countrycode(missingness$country, 'country.name', 'continent')
+
+missingness %>%
+  dplyr::select(country, continent) %>%
+  dplyr::filter(is.na(continent)) %>%
+  dplyr::distinct()
+
+missingness$continent[missingness$country == "Czechoslovakia"] <- "Europe"
+missingness$continent[missingness$country == "German Democratic Republic"] <- "Europe"
+missingness$continent[missingness$country == "Kosovo"] <- "Europe"
+missingness$continent[missingness$country == "Yugoslavia"] <- "Europe"
+missingness$continent[missingness$country == "Yemen Arab Republic"] <- "Asia"
+missingness$continent[missingness$country == "Yemen People's Republic"] <- "Asia"
+
+g <- ggplot2::ggplot(missingness, aes(Year, Country)) +
+  geom_tile(aes(fill = Value), colour = "grey50") +
+  scale_fill_manual(values = c("#FFFFFF",
+                             "#ff0000", 
+                             "#00FFFF", 
+                             "#00008B"),
+                    labels = c("No entity",
+                               "COW state, missing",
+                               "COW state, not coded",
+                               "COW state, coded")) +
+  theme(axis.text.x = element_text(angle = 90,vjust = 0.5),
+        axis.text.y = element_blank(),
+        legend.position = "bottom") +
+  labs(y = "",
+       title = "Missingness") +
+  facet_wrap(~ continent,
+             scales = "free")
+
+g
+
+ggsave(g, file = paste0(here::here(), "/paper/figures/missingness/coverage_overall.png"), width = 20, height = 20)
+```
+
+# Tek exploration
+```{r, fig.width=16, fig.height=8}
+iiss <- readRDS(file = paste0(here::here(), "/data/01z_rDMC_long.rds"))
+
+# at least one state having each tek
+my_palette <- RColorBrewer::brewer.pal(7, "Reds")
+
+iiss <- iiss %>%
+  dplyr::select(year, country, tek, unit_count) %>%
+  dplyr::filter(!is.na(unit_count) & 
+                  unit_count != 0) %>%
+  dplyr::arrange(year) %>%
+  dplyr::distinct(year, country, tek) %>%
+  dplyr::group_by(year, tek) %>%
+  dplyr::mutate(percent = (length(country) / length(unique(iiss$country))) * 100) %>%
+  dplyr::distinct(year, tek, percent) %>%
+  tidyr::separate(tek, c("category", "tek"), sep = "_") %>%
+  dplyr::mutate(category = stringr::str_to_title(category)) %>%
+  dplyr::mutate(tek = stringr::str_to_title(tek)) %>%
+  dplyr::mutate(year = as.Date(as.character(year), 
+                               format = "%Y")) %>%
+  dplyr::mutate(year = lubridate::year(year))
+
+g <- ggplot(iiss, aes(x = year, 
+                 y = tek, 
+                 fill = percent)) +
+  geom_tile(color = "white", size = 0.35) +
+#  scale_x_continuous(breaks = scales::pretty_breaks(n = 5)) +
+  scale_y_discrete(limits = rev) +
+  scale_fill_gradientn(colors = my_palette, 
+                       na.value = 'white',
+                       name = "Percent of Countries") +
+  theme_bw() +
+  coord_cartesian(clip = 'off') +
+  labs(title = "Countries Possessing Each Military Technology (1970-2014)",
+       x = "Year",
+       y = "Military Techology",
+       caption = "Source: IISS") +
+  theme(panel.grid = element_blank(),
+        title = element_text(size = 20),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 14),
+        strip.text = element_text(size = 14),
+        legend.position = "bottom") +
+  facet_wrap(~ category, 
+             scales = "free", 
+             ncol = 3)
+
+g
+
+ggsave(g, file = paste0(here::here(), "/paper/figures/equipment_types/common_teks_per_year.png"), width = 16, height = 16)
+```
+
+# Missingness map
+```{r}
+states <- read.csv(file = paste0(here::here(), '/inst/extdata/polities_mssl_gleditschward_states.csv')) %>%
+  dplyr::filter(microstate == 0) %>%
+  dplyr::select(gwcode, gw_start, gw_end)
+
+# Make long to expand year range, since we need to match on the qcode-year combo
+states$gw_start <- as.POSIXct(states$gw_start)
+states$gw_end <- as.POSIXct(states$gw_end)
+
+states$gw_start <- as.numeric(format(states$gw_start, '%Y'))
+states$gw_end <- as.numeric(format(states$gw_end, '%Y'))
+
+# Make list of years in existence from 1970-2014 from GW
+states <- states %>%
+  dplyr::filter(gw_end >= 1970) %>%
+  dplyr::mutate(start = dplyr::if_else(gw_start <= 1970, 1970, gw_start),
+                end = dplyr::if_else(gw_end < 2012, gw_end, 2014),
+                years = end - start) %>%
+  dplyr::select(gwcode, years)
+
+# Make list of years coded from 1970-2014 from rDMC
+iiss <- readRDS(file = paste0(here::here(), '/data/01z_rDMC_raw.rds')) %>%
+  dplyr::filter(year >= 1970 &
+                  year <= 2014) %>%
+  dplyr::select(year, ccode) %>%
+  dplyr::rename(gwcode = ccode) %>%
+  dplyr::mutate(coded = 1,
+                gwcode = as.numeric(gwcode)) %>%
+  dplyr::distinct() %>%
+  dplyr::group_by(gwcode) %>%
+  dplyr::mutate(coverage = sum(coded) - 1) %>%
+  dplyr::mutate(coverage = dplyr::if_else(is.na(coverage), 0, coverage)) %>%
+  dplyr::select(gwcode, coverage) %>%
+  dplyr::distinct()
+
+coded <- dplyr::left_join(states, iiss) %>%
+  dplyr::mutate(coded = round(coverage/years, 2)) %>%
+  dplyr::mutate(coded = dplyr::if_else(coded > 1, 1, coded))
+
+coded$cname <- countrycode::countrycode(coded$gwcode, "cown", "cowc")
+coded$name <- countrycode::countrycode(coded$gwcode, "cown", "country.name")
+
+# Fix some country names manually
+coded$name[coded$name == "United States"] <- "USA"
+coded$name[coded$name == "United Kingdom"] <- "UK"
+coded$name[coded$name == "German Democratic Republic"] <- "Germany"
+coded$name[coded$name == "Congo - Kinshasa"] <- "Democratic Republic of the Congo"
+coded$name[coded$name == "Congo - Brazzaville"] <- "Republic of Congo"
+coded$name[coded$name == "Czechia"] <- "Czech Republic"
+
+hist(coded$coded)
+median(coded$coded, na.rm = TRUE)
+coded %>%
+  dplyr::select(coded) %>%
+  ggplot(aes(x = coded)) + 
+  geom_density() + 
+  theme_bw()
+
+coded %>%
+  dplyr::filter(coded > 0.9)
+
+coded <- coded %>%
+  dplyr::mutate(category = dplyr::case_when(coded > 0 & coded < 0.75 ~ "1-74%",
+                                            coded >= 0.75 & coded < 0.9 ~ "75-89%",
+                                            coded >= 0.90 & coded < 1 ~ "90-99%",
+                                            coded == 1 ~ "100%"))
+
+coded$category <- as.factor(coded$category)
+
+coded$category <- factor(coded$category, levels = c("1-74%", "75-89%", "90-99%", "100%"))
+  
+
+## Make map
+WorldData <- map_data('world')
+
+theme_map <- function(base_size = 9, base_family = "") {
+  theme_bw(base_size = base_size, base_family = base_family) %+replace%
+    theme(axis.line = element_blank(),
+          axis.text = element_blank(),
+          axis.ticks = element_blank(),
+          axis.title = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_blank(),
+          panel.grid = element_blank(),
+          panel.spacing = unit(0, "lines"),
+          plot.background = element_blank(),
+          legend.justification = c(0, 0)#,
+          #legend.position = c(1,1)
+          )
+}
+
+g <- ggplot() +
+  geom_map(data = WorldData,
+           map = WorldData,
+           aes(group = group,
+               map_id = region),
+           fill = "white",
+           size = 0.35) +
+  geom_map(data = coded,
+           map = WorldData,
+           aes(fill = category,
+               map_id = name)) +
+  borders("world",
+          size = 0.25,
+          colour = "black") +
+  scale_fill_brewer(type = "div",
+                    guide = "legend") +
+  theme_map() +
+  coord_cartesian(ylim = c(-50, 90)) +
+  theme(legend.position = "bottom",
+        legend.key = element_rect(fill = "white",
+                                  colour = "black")) +
+  labs(title = "Percent of years coded for each country",
+       fill = "Percent")
+
+g
+
+ggsave(g, file = paste0(here::here(), "/paper/figures/missingness/missingness_map_raw.png"), width = 6, height = 3.5, dpi = 600)
+```
+
+# Time series ratios
+```{r}
+iiss <- readRDS(file = paste0(here::here(), "/data/01z_rDMC_long.rds"))
+
+iiss <- iiss %>%
+  tidyr::separate(col = tek, into = c("parent", "child"), sep = "_", remove = TRUE) %>%
+  dplyr::select(country, year, parent, unit_count) %>%
+  dplyr::group_by(country, year, parent) %>%
+  dplyr::summarize(equipment_count = sum(unit_count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(!is.na(equipment_count)) %>%
+  dplyr::group_by(year) %>%
+  dplyr::mutate(equipment_ratio = round(equipment_count/sum(equipment_count), 2)) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(equipment_ratio >= 0.001)
+
+sort(unique(iiss$parent))
+
+g <- iiss %>%
+  dplyr::filter(parent == "armoured fighting vehicles") %>%
+  dplyr::mutate(country = as.factor(country),
+                parent = as.factor(parent)) %>%
+  dplyr::mutate(country = dplyr::recode(country,
+                                        "us" = "US",
+                                        "russia" = "Russia",
+                                        "soviet union" = "Soviet Union",
+                                        "china" = "China",
+                                        "democratic republic of the congo" = "Congo",
+                                        "german federal republic" = "West Germany")) %>%
+  ggplot(aes(x = year, 
+             y = equipment_ratio, 
+             color = country)) + 
+  geom_line(size = 3) + 
+  gghighlight::gghighlight(max(equipment_ratio) > 0.1, 
+                           use_direct_label = T, 
+                           label_params = list(size = 8), 
+                           label_key = country,
+                           unhighlighted_params = list(size = 1)) + 
+  scale_color_brewer(palette = "Dark2") +
+  labs(title = "Proportion of the World's Armoured Fighting Vehicles (1970-2014)",
+       caption = "Note: Highlighted states had more than 10% of the world's AFV in at least one year.",
+       x = "Year",
+       y = "Proportion") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        panel.grid = element_blank(),
+        text = element_text(size = 24))
+
+g
+
+ggsave(g, file = paste0(here::here(),"/paper/figures/time_series/country_ratios_afv.png"), height = 8, width = 16, units = "in")
+```
+
+# MBT invention
+```{r}
+# Read in cleaned, raw data with unit names
+iiss <- readRDS(file = paste0(here::here(), "/data/01z_rDMC_raw.rds"))
+
+# Read in list of cleaned MBT names
+mbt <- googlesheets4::read_sheet('1yf-dGAiicIGNScouedvOCET4s34GGl3OelXrgOPWq8g',
+                                 sheet = "iiss_mbt")
+
+# Replace NA values of MBT_NEW with MBT_RAW value
+mbt$mbt_new[is.na(mbt$mbt_new)] <- as.character(mbt$mbt_raw[is.na(mbt$mbt_new)])
+
+# Subset to main battle tanks and identify the earliest year and final year for each string value
+world_tek_eqpt_name_first_year <- iiss %>%
+  dplyr::select(year, equipment_name, unit_name, unit_count) %>%
+  dplyr::arrange(year) %>%
+  dplyr::group_by(equipment_name, unit_name) %>%
+  dplyr::mutate(unit_count = dplyr::if_else(is.na(unit_count), 1, unit_count)) %>%
+  dplyr::filter(unit_count > 0) %>%
+  dplyr::filter(equipment_name == "MBT") %>%
+  dplyr::filter(!stringr::str_detect(unit_name, "/|,")) %>%
+  dplyr::slice(1) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-unit_count)
+  
+world_tek_eqpt_name_last_year <- iiss %>%
+  dplyr::select(year, equipment_name, unit_name, unit_count) %>%
+  dplyr::arrange(year) %>%
+  dplyr::group_by(unit_name,equipment_name) %>%
+  dplyr::mutate(unit_count = dplyr::if_else(is.na(unit_count), 1, unit_count)) %>%
+  dplyr::filter(unit_count > 0) %>%
+  dplyr::filter(equipment_name == "MBT") %>%
+  dplyr::filter(!stringr::str_detect(unit_name, "/|,")) %>%
+  dplyr::select(-equipment_name, -unit_count) %>%
+  dplyr::summarise(year=last(year)) %>%
+  dplyr::ungroup()
+
+names(world_tek_eqpt_name_last_year)[names(world_tek_eqpt_name_last_year) == "year"] <- "last_year"
+names(world_tek_eqpt_name_first_year)[names(world_tek_eqpt_name_first_year) == "year"] <- "first_year"
+
+world_tek_eqpt_name <- merge(world_tek_eqpt_name_last_year, world_tek_eqpt_name_first_year, by="unit_name")
+ 
+# Clean MBT_NEW in MBT data set and remove 
+mbt$mbt_new[mbt$mbt_new == "OF-40 Mk2 (Lion)"] <- "OF-40 Mk2"
+
+ind_LTTK_mbt <- (mbt$mbt_new == "AMX-13" | mbt$mbt_new ==  "Panhard AML" | mbt$mbt_raw == "7>iM" |
+               mbt$mbt_raw == "AMX-13" | mbt$mbt_raw == "Fenneck" | mbt$mbt_raw == "M-20" |
+               mbt$mbt_raw == "M-551 Sheridan" | mbt$mbt_raw == "M-706" | mbt$mbt_raw == "M-77"| 
+               mbt$mbt_raw == "M-9" | mbt$mbt_raw == "PT-76" | mbt$mbt_raw == "Saladin" |
+               mbt$mbt_raw == "T-54 and T-59" | mbt$mbt_raw == "Tornado ADV" | mbt$mbt_raw == "Tpz-1 Fuchs" |   mbt$mbt_raw == "VAB Reco NBC" | mbt$mbt_raw == "VBL M-11" | mbt$mbt_raw == "Wiesel")
+
+mbt_cleaned <- mbt[!ind_LTTK_mbt,]
+
+names(mbt_cleaned)[names(mbt_cleaned) == "mbt_new"] <- "unit_name"
+
+duplicate_mbt <- duplicated(mbt_cleaned$unit_name,)
+
+mbt_cleaned <- mbt_cleaned[!duplicate_mbt,]
+
+# Clean UNIT_NAME in WORLD_TEK_EQPT_NAME data set and remove duplicates
+ind_LTTK_tek <- (world_tek_eqpt_name$unit_name == "7 > iM" | world_tek_eqpt_name$unit_name == "AMX-13" | world_tek_eqpt_name$unit_name == "Fenneck" | world_tek_eqpt_name$unit_name == "M-20" |world_tek_eqpt_name$unit_name == "M-551 Sheridan" | world_tek_eqpt_name$unit_name == "M-706" | world_tek_eqpt_name$unit_name == "M-77"| world_tek_eqpt_name$unit_name == "M-9" | world_tek_eqpt_name$unit_name == "PT-76" | world_tek_eqpt_name$unit_name == "Saladin" | world_tek_eqpt_name$unit_name == "T-54 and T-59" | world_tek_eqpt_name$unit_name == "Tornado ADV" | world_tek_eqpt_name$unit_name == "Tpz-1 Fuchs" |   world_tek_eqpt_name$unit_name == "VAB Reco NBC" | world_tek_eqpt_name$unit_name == "VBL M-11" | world_tek_eqpt_name$unit_name == "Wiesel")
+
+world_tek_eqpt_name_cleaned <- world_tek_eqpt_name[!ind_LTTK_tek,]
+
+duplicate_wte <- duplicated(world_tek_eqpt_name_cleaned$unit_name)
+
+world_tek_eqpt_name_cleaned <- world_tek_eqpt_name_cleaned[!duplicate_wte,]
+
+
+# Merge Data by UNIT_NAME
+merge_mbt_year <- merge(world_tek_eqpt_name_cleaned, mbt_cleaned, by="unit_name")
+
+# Plot 
+g <- ggplot(merge_mbt_year, aes(x = first_year, xend = last_year,
+   y = reorder(unit_name, first_year))) +     geom_dumbbell(data = merge_mbt_year, aes(y = reorder(unit_name, first_year), x = first_year, xend = last_year), size=1.0, color="blue", size_x = 1.5, size_xend = 1.5, colour_x = "blue", colour_xend = "blue") + scale_x_continuous(breaks = seq(min(merge_mbt_year$first_year), max(merge_mbt_year$last_year), by = 5), labels = c("pre-1970", "1975", "1980", "1985","1990","1995","2000","2005","2010")) +
+  labs(title = "Main Battle Tanks: Years of Operation (1970-2014)",
+       x = "Year" ,
+       y = "Main Battle Tank",
+       caption = "Source: IISS") +
+  theme_bw() +
+  theme(title = element_text(size = 20),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        axis.text.x = element_text(size = 20),
+        axis.text.y = element_text(size = 20),
+        strip.text = element_text(size = 20))
+g 
+
+ggsave(g, file = paste0(here::here(), "/paper/figures/equipment_types/mbt_inventions.png"), width = 15, height = 20)
+```
+
+# Mean and total aircraft
+```{r}
+iiss <- readRDS(file = paste0(here::here(), "/data/01z_rDMC_long.rds"))
+
+iiss <- iiss %>%
+  tidyr::separate(col = tek, into = c("parent", "child"), sep = "_", remove = TRUE) %>%
+  dplyr::select(country, year, parent, unit_count) %>%
+  dplyr::group_by(country, year, parent) %>%
+  dplyr::summarize(equipment_count = sum(unit_count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(!is.na(equipment_count)) %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(annual_avg = round(mean(equipment_count), 0),
+                annual_total = sum(equipment_count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(year, parent, annual_avg, annual_total) %>%
+  dplyr::distinct()
+
+g <- iiss %>%
+  dplyr::filter(parent == "aircraft") %>%
+  ggplot(aes(year, annual_total)) +
+  geom_bar(stat = "identity", width = 1, fill = "gray", color = "black") +
+  geom_line(aes(x = year, y = annual_avg*100),
+            color = "blue", size = 2) +
+  labs(title = "Global National Aircraft Inventories (1970-2014)",
+       subtitle = "", x = "Year", y = "Total world count") +
+  scale_y_continuous(sec.axis = sec_axis(~ . /100, name = "Mean national count")) +
+  scale_x_continuous(breaks = seq(1970, 2014, 5)) +
+  theme_minimal() +
+  theme(text = element_text(size = 24),
+        legend.position = "none",
+        axis.title.y.right = element_text(color = "blue"),
+        axis.text.y.right = element_text(color = "blue"))
+
+g
+
+g <- ggsave(g, file = paste0(here::here(),"/paper/figures/time_series/world_totals_aircraft.png"), height = 8, width = 16, units = "in")
+```
+
+# Overlay spider plot
+The goal here is to show 3 countries that should have somewhat similar militaries (similar levels of military spending or GDP) but that actually have very different looking militaries, similar to the France vs Japan example I open with.
+
+Of the following options, settle on the one that's the most interesting looking, meaning that 1) the countries have important differences in counts of some capabilities and 2) it's somewhat intuitive why the countries differ in their specialization score. Possible triples include:
+- same milex: singapore, poland, taiwan
+- similar milex: brazil, russia, saudi arabia
+- same GDP: russia, canada, india
+- same milex: israel, uae, canada
+
+Specialization scores for each country are:
+Singapore	0.244372
+Poland	0.412424
+Taiwan	1.378651
+
+Brazil	0.906337
+Russia	3.759785
+Saudi Arabia	1.011496
+
+Russia	3.759785
+Canada	0.54232
+India	2.16292
+
+Israel	1.071826
+United Arab Emirates	0.236975
+Canada	0.54232
+
+Primary things to add/tinker with:
+- grid min, mid, and max zooming in the right degree to see variation
+- fix the tek labels so they don't get cut off
+- figure out the right dimensions when saving so it doesn't look janky/is paper friendly (not sure if it should be a 4x4 inch square, wider given the labels, etc)
+- add the specialization score for each country, probably to the legend label
+- if we facet by country instead of overlay on the same plot, is that better?
+
+Aspirational things to add/tinker with:
+- order the capabilities by domain (have all the land next to each other, all the sea, etc)
+- color each capability by domain (land, air, sea, space)
+
+Some spider chart resources:
+- using ggradar https://finnstats.com/index.php/2021/06/07/radar-chart-in-r-spider-chart/
+- using ggplot https://www.sportschord.com/post/polar_area_charts_tutorial/ and https://www.r-bloggers.com/the-grammar-of-graphics-and-radar-charts/
+- using radarBoxplot https://cran.r-project.org/web/packages/radarBoxplot/readme/README.html
+- using ggiraphExtra https://www.datascienceblog.net/post/data-visualization/radar-plot/
+
+Old code from the thousands of these we made before:
+- R/generate_spiderplots.R
+- R/graph_country_polar.R
+- R/radar_plots.R
+- R/ratio_spiderplot.R (and similar)
+
+```{r}
+iiss <- readRDS(file = paste0(here::here(), "/data/01z_rDMC_long.rds"))
+
+specialization_scores <- readRDS(file = paste0(here::here(), "/data/02a_DV_specialization.rds"))
+
+
+#GGRADAR plot for TRIPLE: Singapore, Poland, Taiwan
+g <- iiss %>%
+  tidyr::separate(tek,
+                  into = c("parent", "child"),
+                  sep = "_") %>%
+  dplyr::group_by(year, country, parent) %>%
+  dplyr::summarise(parent_count = sum(unit_count,
+                                      na.rm = TRUE),
+                   .groups = "keep") %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(parent_ratio = parent_count/sum(parent_count,
+                                                na.rm = TRUE)) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 2010) %>%
+  dplyr::filter(country %in% c('singapore',
+                               'poland',
+                               'taiwan')) %>%
+  dplyr::select(country, parent, parent_ratio) %>%
+  dplyr::group_by(country) %>%
+  tidyr::spread(key = parent, value = parent_ratio) %>%
+  ggradar::ggradar(values.radar = c("0%", "2.5%", "5%"),
+                   grid.min = 0,
+                   grid.max = 0.05,
+                   grid.mid = 0.025,
+                   group.line.width = 1, 
+                   group.point.size = 1.5,
+                   base.size = 4,
+                   background.circle.colour = "white",
+                   gridline.mid.colour = "grey",
+                   axis.label.size = 2,
+                   grid.label.size = 3,
+                   legend.text.size = 4,
+                   plot.title = "Distibution of Military Capabilities 
+(Percent of World   Share - 2010)",
+                   legend.position = "bottom")
+g
+
+ggsave(g, file = paste0(here::here(),"/paper/figures/spider_plots/comparison/2010_poland-singapore-taiwan.png"), height = 4, width = 4, units = "in")
+
+#GGRADAR plot for TRIPLE: Brazil, Russia, Saudi Arabia
+g <- iiss %>%
+  tidyr::separate(tek,
+                  into = c("parent", "child"),
+                  sep = "_") %>%
+  dplyr::group_by(year, country, parent) %>%
+  dplyr::summarise(parent_count = sum(unit_count,
+                                      na.rm = TRUE),
+                   .groups = "keep") %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(parent_ratio = parent_count/sum(parent_count,
+                                                na.rm = TRUE)) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 2010) %>%
+  dplyr::filter(country %in% c('brazil',
+                               'russia',
+                               'saudi arabia')) %>%
+  dplyr::select(country, parent, parent_ratio) %>%
+  dplyr::group_by(country) %>%
+  tidyr::spread(key = parent, value = parent_ratio) %>%
+  ggradar::ggradar(values.radar = c("0%", "12.5%", "25%"),
+                   grid.min = 0,
+                   grid.max = 0.25,
+                   grid.mid = 0.125,
+                   group.line.width = 1, 
+                   group.point.size = 1.5,
+                   base.size = 4,
+                   background.circle.colour = "white",
+                   gridline.mid.colour = "grey",
+                   axis.label.size = 2,
+                   grid.label.size = 3,
+                   legend.text.size = 4,
+                   plot.title = "Distibution of Military Capabilities (Percent of World Share - 2010)",
+                   legend.position = "bottom")
+g
+
+ggsave(g, file = paste0(here::here(),"/paper/figures/spider_plots/comparison/2010_brazil-russia-saudi_arabia.png"), height = 4, width = 4, units = "in")
+
+#GGRADAR plot for TRIPLE: Russia, Canada, India
+g <- iiss %>%
+  tidyr::separate(tek,
+                  into = c("parent", "child"),
+                  sep = "_") %>%
+  dplyr::group_by(year, country, parent) %>%
+  dplyr::summarise(parent_count = sum(unit_count,
+                                      na.rm = TRUE),
+                   .groups = "keep") %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(parent_ratio = parent_count/sum(parent_count,
+                                                na.rm = TRUE)) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 2010) %>%
+  dplyr::filter(country %in% c('russia',
+                               'canada',
+                               'india')) %>%
+  dplyr::mutate(country = stringr::str_to_title(country)) %>%
+  dplyr::select(country, parent, parent_ratio) %>%
+  dplyr::group_by(country) %>%
+  tidyr::spread(key = parent, value = parent_ratio) %>%
+  ggradar::ggradar(values.radar = c("0%", "12.5%", "25%"),
+                   grid.min = 0,
+                   grid.max = 0.25,
+                   grid.mid = 0.125,
+                   group.line.width = 1, 
+                   group.point.size = 1.5,
+                   base.size = 2,
+                   background.circle.colour = "white",
+                   gridline.mid.colour = "grey",
+                   axis.label.size = 2,
+                   grid.label.size = 3,
+                   legend.text.size = 4,
+                   plot.title = "Distibution of Military Capabilities (Percent of World Share - 2010)",
+                   legend.position = "bottom")
+g
+
+ggsave(g, file = paste0(here::here(),"/paper/figures/spider_plots/comparison/2010_russia-canada-india.png"), height = 4, width = 4, units = "in")
+
+#GGRADAR plot for TRIPLE (three separate plots): 
+#Israel Overlay Spider Plot for Triple (Israel, UAE, Canada)
+israel <- iiss %>%
+  tidyr::separate(tek,
+                  into = c("parent", "child"),
+                  sep = "_") %>%
+  dplyr::group_by(year, country, parent) %>%
+  dplyr::summarise(parent_count = sum(unit_count,
+                                      na.rm = TRUE),
+                   .groups = "keep") %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(parent_ratio = parent_count/sum(parent_count,
+                                                na.rm = TRUE)) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 2010) %>%
+  dplyr::filter(country %in% c('israel')) %>%
+  dplyr::mutate(country = stringr::str_to_title(country)) %>%
+  dplyr::mutate(parent = dplyr::recode(parent,
+                                       'principal surface combatants' = 'surface ships',
+                                       'patrol and coastal combatants' = 'coastal ships',
+                                       'anti-tank/anti-infrastructure' = 'anti-tank',
+                                       'armoured fighting vehicles' = 'combat vehicle',
+                                       'unmanned aerial vehicles' = 'uav')) %>%
+  dplyr::select(country, parent, parent_ratio) %>%
+  dplyr::mutate(parent = fct_relevel(parent, c("air defence", "aircraft", "helicopters", "uav", "ballistic missiles",       "radars", "submarines", "surface ships", "coastal ships", "amphibious", "logistics and support", "mine warfare", "land/sea defence",      "anti-tank", "combat vehicle"))) %>%
+  dplyr::group_by(country) %>%
+  tidyr::spread(key = parent, value = parent_ratio) %>%
+  ggradar::ggradar(values.radar = c("0%", "2.5%", "5%"),
+                   grid.min = 0,
+                   grid.max = 0.05,
+                   grid.mid = 0.025,
+                   group.line.width = 0.5, 
+                   group.point.size = 1.5,
+                   plot.extent.x.sf = 1,
+                   plot.extent.y.sf = 1.5,
+                   base.size = 2,
+                   background.circle.colour = "white",
+                   gridline.mid.colour = "grey",
+                   axis.label.size = 4,
+                   grid.label.size = 5,
+                   legend.text.size = 10,
+                   plot.title =  "Israel's Military Capabilities in 2010 
+Specialization Score: 1.07",
+                   legend.position = "bottom",
+                   group.colour = "blue")
+israel
+
+ggsave(israel, file = paste0(here::here(),"/paper/figures/spider_plots/comparison/2010_israel-triple-with-united_arab_emirates-canada.png"), height = 8, width = 8, units = "in")
+
+#UAE Overlay Spider Plot for Triple (Israel, UAE, Canada)
+uae <- iiss %>%
+  tidyr::separate(tek,
+                  into = c("parent", "child"),
+                  sep = "_") %>%
+  dplyr::group_by(year, country, parent) %>%
+  dplyr::summarise(parent_count = sum(unit_count,
+                                      na.rm = TRUE),
+                   .groups = "keep") %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(parent_ratio = parent_count/sum(parent_count,
+                                                na.rm = TRUE)) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 2010) %>%
+  dplyr::filter(country %in% c('united arab emirates')) %>%
+  dplyr::mutate(country = stringr::str_to_title(country)) %>%
+  dplyr::mutate(parent = dplyr::recode(parent,
+                                       'principal surface combatants' = 'surface ships',
+                                       'patrol and coastal combatants' = 'coastal ships',
+                                       'anti-tank/anti-infrastructure' = 'anti-tank',
+                                       'armoured fighting vehicles' = 'combat vehicle',
+                                       'unmanned aerial vehicles' = 'uav')) %>%
+  dplyr::select(country, parent, parent_ratio) %>%
+  dplyr::mutate(parent = fct_relevel(parent, c("air defence", "aircraft", "helicopters", "uav", "ballistic missiles",       "radars", "submarines", "surface ships", "coastal ships", "amphibious", "logistics and support", "mine warfare", "land/sea defence",      "anti-tank", "combat vehicle"))) %>%
+  dplyr::group_by(country) %>%
+  tidyr::spread(key = parent, value = parent_ratio) %>%
+  ggradar::ggradar(values.radar = c("0%", "2.5%", "5%"),
+                   grid.min = 0,
+                   grid.max = 0.05,
+                   grid.mid = 0.025,
+                   group.line.width = 0.5, 
+                   group.point.size = 1.5,
+                   plot.extent.x.sf = 1,
+                   plot.extent.y.sf = 1.5,
+                   base.size = 2,
+                   background.circle.colour = "white",
+                   gridline.mid.colour = "grey",
+                   axis.label.size = 4,
+                   grid.label.size = 5,
+                   legend.text.size = 10,
+                   plot.title = "United Arab Emirates' Military Capabilities in 2010
+Specialization Score: 0.24",
+                   legend.position = "bottom",
+                   group.colour = "green")
+uae
+
+ggsave(uae, file = paste0(here::here(),"/paper/figures/spider_plots/comparison/2010_united_arab_emirates-triple-with-israel-canada.png"), height = 8, width = 8, units = "in")
+
+#Canada Overlay Spider Plot for Triple (Israel, UAE, Canada)
+canada <- iiss %>%
+  tidyr::separate(tek,
+                  into = c("parent", "child"),
+                  sep = "_") %>%
+  dplyr::group_by(year, country, parent) %>%
+  dplyr::summarise(parent_count = sum(unit_count,
+                                      na.rm = TRUE),
+                   .groups = "keep") %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(parent_ratio = parent_count/sum(parent_count,
+                                                na.rm = TRUE)) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 2010) %>%
+  dplyr::filter(country %in% c('canada')) %>%
+  dplyr::mutate(country = stringr::str_to_title(country)) %>%
+  dplyr::mutate(parent = dplyr::recode(parent,
+                                       'principal surface combatants' = 'surface ships',
+                                       'patrol and coastal combatants' = 'coastal ships',
+                                       'anti-tank/anti-infrastructure' = 'anti-tank',
+                                       'armoured fighting vehicles' = 'combat vehicle',
+                                       'unmanned aerial vehicles' = 'uav')) %>%
+  dplyr::mutate(color = "red") %>%
+  dplyr::select(country, parent, parent_ratio) %>%
+  dplyr::mutate(parent = fct_relevel(parent, c("air defence", "aircraft", "helicopters", "uav", "ballistic missiles",       "radars", "submarines", "surface ships", "coastal ships", "amphibious", "logistics and support", "mine warfare", "land/sea defence",      "anti-tank", "combat vehicle"))) %>%
+  dplyr::group_by(country) %>%
+  tidyr::spread(key = parent, value = parent_ratio) %>%
+  ggradar::ggradar(values.radar = c("0%", "2.5%", "5%"),
+                   grid.min = 0,
+                   grid.max = 0.05,
+                   grid.mid = 0.025,
+                   group.line.width = 0.5, 
+                   group.point.size = 1.5,
+                   plot.extent.x.sf = 1,
+                   plot.extent.y.sf = 1.5,
+                   base.size = 2,
+                   background.circle.colour = "white",
+                   gridline.mid.colour = "grey",
+                   axis.label.size = 4,
+                   grid.label.size = 5,
+                   legend.text.size = 10,
+                   plot.title = "Canada's Military Capabilities in 2010
+Specialization Score:	0.54",
+                   legend.position = "bottom",
+                   group.colour = "red")
+
+canada
+
+ggsave(canada, file = paste0(here::here(),"/paper/figures/spider_plots/comparison/2010_canada-triple-with-united_arab_emirates-israel.png"), height = 8, width = 8, units = "in")
+
+#Albania/Georgia  Spider Plot 2004 - 5 years pre joining NATO
+albania_georgia_2004 <- iiss %>%
+  tidyr::separate(tek,
+                  into = c("parent", "child"),
+                  sep = "_") %>%
+  dplyr::group_by(year, country, parent) %>%
+  dplyr::summarise(parent_count = sum(unit_count,
+                                      na.rm = TRUE),
+                   .groups = "keep") %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(parent_ratio = parent_count/sum(parent_count,
+                                                na.rm = TRUE)) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 2004) %>%
+  dplyr::filter(country %in% c("albania", "georgia")) %>%
+  dplyr::mutate(country = stringr::str_to_title(country)) %>%
+  dplyr::mutate(parent = dplyr::recode(parent,
+                                       'principal surface combatants' = 'surface ships',
+                                       'patrol and coastal combatants' = 'coastal ships',
+                                       'anti-tank/anti-infrastructure' = 'anti-tank',
+                                       'armoured fighting vehicles' = 'combat vehicle',
+                                       'unmanned aerial vehicles' = 'uav')) %>%
+  dplyr::mutate(color = "red") %>%
+  dplyr::select(country, parent, parent_ratio) %>%
+  dplyr::mutate(parent = forcats::fct_relevel(parent, c("air defence", "aircraft", "helicopters", "uav", "ballistic missiles",       "radars", "submarines", "surface ships", "coastal ships", "amphibious", "logistics and support", "mine warfare", "land/sea defence",      "anti-tank", "combat vehicle"))) %>%
+  dplyr::group_by(country) %>%
+  tidyr::spread(key = parent, value = parent_ratio) %>%
+  ggradar::ggradar(values.radar = c("0%", "0.5%", "1%"),
+                   grid.min = 0,
+                   grid.max = 0.01,
+                   grid.mid = 0.005,
+                   group.line.width = 0.5, 
+                   group.point.size = 1.5,
+                   plot.extent.x.sf = 1,
+                   plot.extent.y.sf = 1.5,
+                   base.size = 2,
+                   background.circle.colour = "white",
+                   gridline.mid.colour = "grey",
+                   axis.label.size = 4,
+                   grid.label.size = 5,
+                   legend.text.size = 10,
+                   plot.title = "Distibution of Military Capabilities (2004)",
+                   legend.position = "bottom",
+                   group.colour = c("darkmagenta","forestgreen"))
+
+albania_georgia_2004
+
+ggsave(albania_georgia_2004, file = paste0(here::here(),"/paper/figures/spider_plots/comparison/2004_albania_georgia.png"), height = 8, width = 8, units = "in")
+
+# Albania/Georgia Spider Plot 2014 - 5 years post joining NATO
+albania_georgia_2014 <- iiss %>%
+  tidyr::separate(tek,
+                  into = c("parent", "child"),
+                  sep = "_") %>%
+  dplyr::group_by(year, country, parent) %>%
+  dplyr::summarise(parent_count = sum(unit_count,
+                                      na.rm = TRUE),
+                   .groups = "keep") %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(parent_ratio = parent_count/sum(parent_count,
+                                                na.rm = TRUE)) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 2014) %>%
+  dplyr::filter(country %in% c("albania", "georgia")) %>%
+  dplyr::mutate(country = stringr::str_to_title(country)) %>%
+  dplyr::mutate(parent = dplyr::recode(parent,
+                                       'principal surface combatants' = 'surface ships',
+                                       'patrol and coastal combatants' = 'coastal ships',
+                                       'anti-tank/anti-infrastructure' = 'anti-tank',
+                                       'armoured fighting vehicles' = 'combat vehicle',
+                                       'unmanned aerial vehicles' = 'uav')) %>%
+  dplyr::mutate(color = "red") %>%
+  dplyr::select(country, parent, parent_ratio) %>%
+  dplyr::mutate(parent = forcats::fct_relevel(parent, c("air defence", "aircraft", "helicopters", "uav", "ballistic missiles",       "radars", "submarines", "surface ships", "coastal ships", "amphibious", "logistics and support", "mine warfare", "land/sea defence",      "anti-tank", "combat vehicle"))) %>%
+  dplyr::group_by(country) %>%
+  tidyr::spread(key = parent, value = parent_ratio) %>%
+  ggradar::ggradar(values.radar = c("0%", "0.3%", "0.6%"),
+                   grid.min = 0,
+                   grid.max = 0.006,
+                   grid.mid = 0.003,
+                   group.line.width = 0.5, 
+                   group.point.size = 1.5,
+                   plot.extent.x.sf = 1,
+                   plot.extent.y.sf = 1.5,
+                   base.size = 2,
+                   background.circle.colour = "white",
+                   gridline.mid.colour = "grey",
+                   axis.label.size = 4,
+                   grid.label.size = 5,
+                   legend.text.size = 10,
+                   plot.title = "Distribution of Military Capabilities (2014)",
+                   legend.position = "bottom",
+                   group.colour = c("forestgreen","orange"))
+
+albania_georgia_2014
+
+ggsave(albania_georgia_2014, file = paste0(here::here(),"/paper/figures/spider_plots/comparison/2014_albania_georgia.png"), height = 8, width = 8, units = "in")
+
+#Japan Spider Plot 1984
+japan_1984 <- iiss %>%
+  tidyr::separate(tek,
+                  into = c("parent", "child"),
+                  sep = "_") %>%
+  dplyr::group_by(year, country, parent) %>%
+  dplyr::summarise(parent_count = sum(unit_count,
+                                      na.rm = TRUE),
+                   .groups = "keep") %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(parent_ratio = parent_count/sum(parent_count,
+                                                na.rm = TRUE)) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 1984) %>%
+  dplyr::filter(country %in% c('japan')) %>%
+  dplyr::mutate(country = stringr::str_to_title(country)) %>%
+  dplyr::mutate(parent = dplyr::recode(parent,
+                                       'principal surface combatants' = 'surface ships',
+                                       'patrol and coastal combatants' = 'coastal ships',
+                                       'anti-tank/anti-infrastructure' = 'anti-tank',
+                                       'armoured fighting vehicles' = 'combat vehicle',
+                                       'unmanned aerial vehicles' = 'uav')) %>%
+  dplyr::mutate(color = "red") %>%
+  dplyr::select(country, parent, parent_ratio) %>%
+  dplyr::mutate(parent = fct_relevel(parent, c("air defence", "aircraft", "helicopters", "uav", "ballistic missiles",       "radars", "submarines", "surface ships", "coastal ships", "amphibious", "logistics and support", "mine warfare", "land/sea defence",      "anti-tank", "combat vehicle"))) %>%
+  dplyr::group_by(country) %>%
+  tidyr::spread(key = parent, value = parent_ratio) %>%
+  ggradar::ggradar(values.radar = c("0%", "5.0%", "10%"),
+                   grid.min = 0,
+                   grid.max = 0.10,
+                   grid.mid = 0.05,
+                   group.line.width = 0.5, 
+                   group.point.size = 1.5,
+                   plot.extent.x.sf = 1,
+                   plot.extent.y.sf = 1.5,
+                   base.size = 2,
+                   background.circle.colour = "white",
+                   gridline.mid.colour = "grey",
+                   axis.label.size = 4,
+                   grid.label.size = 5,
+                   legend.text.size = 10,
+                   plot.title = "Japan's Military Capabilities in 1984
+Specialization Score:	-1.54",
+                   legend.position = "bottom",
+                   group.colour = "red")
+
+japan_1984
+
+ggsave(japan_1984, file = paste0(here::here(),"/paper/figures/spider_plots/comparison/japan_1984.png"), height = 8, width = 8, units = "in")
+
+#Japan Spider Plot 2000
+japan_2000 <- iiss %>%
+  tidyr::separate(tek,
+                  into = c("parent", "child"),
+                  sep = "_") %>%
+  dplyr::group_by(year, country, parent) %>%
+  dplyr::summarise(parent_count = sum(unit_count,
+                                      na.rm = TRUE),
+                   .groups = "keep") %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(parent_ratio = parent_count/sum(parent_count,
+                                                na.rm = TRUE)) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 2000) %>%
+  dplyr::filter(country %in% c('japan')) %>%
+  dplyr::mutate(country = stringr::str_to_title(country)) %>%
+  dplyr::mutate(parent = dplyr::recode(parent,
+                                       'principal surface combatants' = 'surface ships',
+                                       'patrol and coastal combatants' = 'coastal ships',
+                                       'anti-tank/anti-infrastructure' = 'anti-tank',
+                                       'armoured fighting vehicles' = 'combat vehicle',
+                                       'unmanned aerial vehicles' = 'uav')) %>%
+  dplyr::mutate(color = "red") %>%
+  dplyr::select(country, parent, parent_ratio) %>%
+  dplyr::mutate(parent = fct_relevel(parent, c("air defence", "aircraft", "helicopters", "uav", "ballistic missiles",       "radars", "submarines", "surface ships", "coastal ships", "amphibious", "logistics and support", "mine warfare", "land/sea defence",      "anti-tank", "combat vehicle"))) %>%
+  dplyr::group_by(country) %>%
+  tidyr::spread(key = parent, value = parent_ratio) %>%
+  ggradar::ggradar(values.radar = c("0%", "5.0%", "10%"),
+                   grid.min = 0,
+                   grid.max = 0.10,
+                   grid.mid = 0.05,
+                   group.line.width = 0.5, 
+                   group.point.size = 1.5,
+                   plot.extent.x.sf = 1,
+                   plot.extent.y.sf = 1.5,
+                   base.size = 2,
+                   background.circle.colour = "white",
+                   gridline.mid.colour = "grey",
+                   axis.label.size = 4,
+                   grid.label.size = 5,
+                   legend.text.size = 10,
+                   plot.title = "Japan's Military Capabilities in 2000
+Specialization Score:	1.50",
+                   legend.position = "bottom",
+                   group.colour = "red")
+
+japan_2000
+
+ggsave(japan_2000, file = paste0(here::here(),"/paper/figures/spider_plots/comparison/japan_2000.png"), height = 8, width = 8, units = "in")
+
+```
+
+# Table alternate
+```{r}
+iiss <- readRDS(file = paste0(here::here(), "/data/01z_rDMC_long.rds"))
+
+bplot <- iiss %>%
+  tidyr::separate(tek,
+                  into = c("parent", "child"),
+                  sep = "_") %>%
+  dplyr::group_by(year, country, parent) %>%
+  dplyr::summarise(parent_count = sum(unit_count,
+                                      na.rm = TRUE),
+                   .groups = "keep") %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(parent_ratio = parent_count/sum(parent_count,
+                                                na.rm = TRUE)) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year %in% c(1983, 2000)) %>%
+  dplyr::filter(country %in% c('japan')) %>%
+  dplyr::mutate(country = stringr::str_to_title(country)) %>%
+  dplyr::select(-country, -parent_ratio) %>%
+  dplyr::group_by(parent) %>%
+  tidyr::spread(key = year, value = parent_count) %>%
+  dplyr::mutate(parent = dplyr::recode(parent,
+                                       'principal surface combatants' = 'surface ships',
+                                       'patrol and coastal combatants' = 'coastal ships',
+                                       'anti-tank/anti-infrastructure' = 'anti-tank',
+                                       'armoured fighting vehicles' = 'combat vehicles',
+                                       'unmanned aerial vehicles' = 'aerial drones')) %>%
+  dplyr::filter(!parent %in% c('ballistic missiles', 'radars'))
+
+bplot$domain[bplot$parent %in% c("air defence", "aircraft", "helicopters", "aerial drones")] <- "air"
+bplot$domain[bplot$parent %in% c("land/sea defence", "anti-tank", "combat vehicles")] <- "land"
+bplot$domain[bplot$parent %in% c("amphibious", "coastal ships", "logistics and support", "mine warfare", "submarines", "surface ships")] <- "sea"
+
+bplot <- bplot %>%
+  dplyr::relocate(domain) %>%
+  dplyr::mutate(domain = stringr::str_to_title(domain),
+                parent = stringr::str_to_title(parent)) %>%
+  dplyr::rename("Domain" = "domain",
+                "Capability" = "parent") %>%
+  dplyr::arrange(Domain)
+
+knitr::kable(bplot)
+```
+
+# Country clustering
+See what are the most similar countries in a given year in terms of either what they posses and also internal/external ratios
+
+## Prep
+```{r}
+iiss <- readRDS(file = paste0(here::here(), "/data/01z_rDMC_long.rds")) %>%
+  dplyr::mutate(cname = countrycode::countrycode(country, "country.name", "cowc"))
+
+# Get population covariate and drop countries below 750,000
+pop <- readRDS(file = paste0(here::here(), "/data/geog_covariates.rds")) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(year, country_abbrev_cow, pop_WDI) %>%
+  dplyr::rename(cname = country_abbrev_cow,
+                pop = pop_WDI)
+
+iiss <- dplyr::left_join(iiss, pop) %>%
+  dplyr::filter(pop > 750000)
+```
+
+## Count data
+```{r}
+# Make IISS count data
+iiss_count <- iiss %>%
+  tidyr::separate(col = tek, into = c("parent", "child"), sep = "_", remove = TRUE) %>%
+  dplyr::select(cname, year, parent, unit_count) %>%
+  dplyr::group_by(cname, year, parent) %>%
+  dplyr::summarize(equipment_count = sum(unit_count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(equip_scale = round(scale(equipment_count), 3)) %>%
+  dplyr::mutate(equip_scale = dplyr::if_else(is.na(equip_scale), 0, equip_scale)) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-equipment_count) %>%
+  tidyr::spread(key = parent, value = equip_scale) %>%
+  dplyr::filter(year == 2014) %>%
+  dplyr::select(-year) %>%
+  dplyr::filter(!is.na(cname)) %>%
+  tibble::column_to_rownames(var = "cname") %>%
+  dplyr::select_if(colSums(.) != 0)
+
+set.seed(2021)
+factoextra::fviz_nbclust(iiss_count, kmeans, method = "wss")
+
+factoextra::fviz_nbclust(iiss_count, kmeans, method = "silhouette")
+
+gap_stat <- cluster::clusGap(iiss_count, FUN = kmeans, nstart = 25,
+                    K.max = 10, B = 50)
+factoextra::fviz_gap_stat(gap_stat)
+
+# Show clusters
+km <- kmeans(iiss_count, 9, nstart = 50)
+factoextra::fviz_cluster(km, data = iiss_count)
+```
+
+## Dummy data
+### K means
+```{r}
+# 2014
+p_2014 <- iiss %>%
+  dplyr::select(cname, year, tek, unit_count) %>%
+  dplyr::mutate(unit_count = dplyr::if_else(is.na(unit_count), 1, unit_count)) %>%
+  dplyr::group_by(cname, year, tek) %>%
+  dplyr::summarize(unit_count = sum(unit_count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(unit_count = dplyr::if_else(unit_count > 0, 1, 0)) %>%
+  dplyr::group_by(cname, year) %>%
+  tidyr::spread(key = tek, value = unit_count) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 2014) %>%
+  dplyr::select(-year) %>%
+  dplyr::filter(!is.na(cname)) %>%
+  tibble::column_to_rownames(var = "cname") %>%
+  janitor::remove_empty(which = "cols") %>%
+  dplyr::select_if(colSums(.) != 0) %>%
+  factoextra::eclust("kmeans", nstart = 25) %>%
+  factoextra::fviz_cluster(geom = "text",
+                           labelsize = 8,
+                           main = "",
+                           palette = "uchicago",
+                           ggtheme = theme_minimal(),
+                           data = iiss) +
+  theme(legend.position = "none")
+ggsave(p_2014, file = paste0(here::here(),"/paper/figures/country_similarity/kmeans_dummy_2014.png"), height = 4, width = 6, units = "in")
+
+# 2004
+p_2004 <- iiss %>%
+  dplyr::select(cname, year, tek, unit_count) %>%
+  dplyr::mutate(unit_count = dplyr::if_else(is.na(unit_count), 1, unit_count)) %>%
+  dplyr::group_by(cname, year, tek) %>%
+  dplyr::summarize(unit_count = sum(unit_count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(unit_count = dplyr::if_else(unit_count > 0, 1, 0)) %>%
+  dplyr::group_by(cname, year) %>%
+  tidyr::spread(key = tek, value = unit_count) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 2004) %>%
+  dplyr::select(-year) %>%
+  dplyr::filter(!is.na(cname)) %>%
+  tibble::column_to_rownames(var = "cname") %>%
+  janitor::remove_empty(which = "cols") %>%
+  dplyr::select_if(colSums(.) != 0) %>%
+  factoextra::eclust("kmeans", nstart = 25) %>%
+  factoextra::fviz_cluster(geom = "text",
+                           labelsize = 8,
+                           main = "",
+                           palette = "uchicago",
+                           ggtheme = theme_minimal(),
+                           data = iiss) +
+  theme(legend.position = "none")
+ggsave(p_2004, file = paste0(here::here(),"/paper/figures/country_similarity/kmeans_dummy_2004.png"), height = 4, width = 6, units = "in")
+
+# 1994
+p_1994 <- iiss %>%
+  dplyr::select(cname, year, tek, unit_count) %>%
+  dplyr::mutate(unit_count = dplyr::if_else(is.na(unit_count), 1, unit_count)) %>%
+  dplyr::group_by(cname, year, tek) %>%
+  dplyr::summarize(unit_count = sum(unit_count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(unit_count = dplyr::if_else(unit_count > 0, 1, 0)) %>%
+  dplyr::group_by(cname, year) %>%
+  tidyr::spread(key = tek, value = unit_count) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 1994) %>%
+  dplyr::select(-year) %>%
+  dplyr::filter(!is.na(cname)) %>%
+  tibble::column_to_rownames(var = "cname") %>%
+  janitor::remove_empty(which = "cols") %>%
+  dplyr::select_if(colSums(.) != 0) %>%
+  factoextra::eclust("kmeans", nstart = 25) %>%
+  factoextra::fviz_cluster(geom = "text",
+                           labelsize = 8,
+                           main = "",
+                           palette = "uchicago",
+                           ggtheme = theme_minimal(),
+                           data = iiss) +
+  theme(legend.position = "none")
+ggsave(p_1994, file = paste0(here::here(),"/paper/figures/country_similarity/kmeans_dummy_1994.png"), height = 4, width = 6, units = "in")
+
+# 1984
+p_1984 <- iiss %>%
+  dplyr::select(cname, year, tek, unit_count) %>%
+  dplyr::mutate(unit_count = dplyr::if_else(is.na(unit_count), 1, unit_count)) %>%
+  dplyr::group_by(cname, year, tek) %>%
+  dplyr::summarize(unit_count = sum(unit_count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(unit_count = dplyr::if_else(unit_count > 0, 1, 0)) %>%
+  dplyr::group_by(cname, year) %>%
+  tidyr::spread(key = tek, value = unit_count) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 1984) %>%
+  dplyr::select(-year) %>%
+  dplyr::filter(!is.na(cname)) %>%
+  tibble::column_to_rownames(var = "cname") %>%
+  janitor::remove_empty(which = "cols") %>%
+  dplyr::select_if(colSums(.) != 0) %>%
+  factoextra::eclust("kmeans", nstart = 25) %>%
+  factoextra::fviz_cluster(geom = "text",
+                           labelsize = 8,
+                           main = "",
+                           palette = "uchicago",
+                           ggtheme = theme_minimal(),
+                           data = iiss) +
+  theme(legend.position = "none")
+ggsave(p_1984, file = paste0(here::here(),"/paper/figures/country_similarity/kmeans_dummy_1984.png"), height = 4, width = 6, units = "in")
+
+# 1974
+p_1974 <- iiss %>%
+  dplyr::select(cname, year, tek, unit_count) %>%
+  dplyr::mutate(unit_count = dplyr::if_else(is.na(unit_count), 1, unit_count)) %>%
+  dplyr::group_by(cname, year, tek) %>%
+  dplyr::summarize(unit_count = sum(unit_count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(unit_count = dplyr::if_else(unit_count > 0, 1, 0)) %>%
+  dplyr::group_by(cname, year) %>%
+  tidyr::spread(key = tek, value = unit_count) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 1974) %>%
+  dplyr::select(-year) %>%
+  dplyr::filter(!is.na(cname)) %>%
+  tibble::column_to_rownames(var = "cname") %>%
+  janitor::remove_empty(which = "cols") %>%
+  dplyr::select_if(colSums(.) != 0) %>%
+  factoextra::eclust("kmeans", nstart = 25) %>%
+  factoextra::fviz_cluster(geom = "text",
+                           labelsize = 8,
+                           main = "",
+                           palette = "uchicago",
+                           ggtheme = theme_minimal(),
+                           data = iiss) +
+  theme(legend.position = "none")
+ggsave(p_1974, file = paste0(here::here(),"/paper/figures/country_similarity/kmeans_dummy_1974.png"), height = 4, width = 6, units = "in")
+
+p_all <- ggpubr::ggarrange(p_1974, p_1984, p_1994, p_2004, p_2014,
+                  labels = c("1974", "1984", "1994", "2004", "2014"),
+                  ncol = 1,
+                  nrow = 5)
+ggpubr::annotate_figure(p_all, top = "Country Tech Portfolio Similarity Clusters")
+ggsave(p_all, file = paste0(here::here(),"/paper/figures/country_similarity/kmeans_dummy_decade.png"), height = 11, width = 8.5, units = "in")
+
+# Show distance between each pair of countries
+# distance <- factoextra::get_dist(iiss_dummy)
+# factoextra::fviz_dist(distance, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+```
+
+### Dendrogram
+```{r}
+# Make IISS dummy data
+iiss_dummy <- iiss %>%
+  dplyr::select(country, year, tek, unit_count) %>%
+  dplyr::mutate(unit_count = dplyr::if_else(is.na(unit_count), 1, unit_count)) %>%
+  dplyr::group_by(country, year, tek) %>%
+  dplyr::summarize(unit_count = sum(unit_count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(unit_count = dplyr::if_else(unit_count > 0, 1, 0)) %>%
+  dplyr::group_by(country, year) %>%
+  tidyr::spread(key = tek, value = unit_count) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(year == 2004) %>%
+  dplyr::select(-year) %>%
+  dplyr::filter(!is.na(country)) %>%
+  dplyr::mutate(country = stringr::str_to_title(country)) %>%
+  tibble::column_to_rownames(var = "country") %>%
+  janitor::remove_empty(which = "cols")
+
+set.seed(2021)
+
+# Show clusters
+dendo <- factoextra::eclust(iiss_dummy, "hclust",
+                            hc_metric = "binary")
+g <- factoextra::fviz_dend(dendo,
+                      type = "rectangle",
+                      palette = "aaas",
+                      horiz = TRUE,
+                      labels_track_height = 0.8,
+                      main = "Country Tech Portfolio Similarity Dendrogram (2004)",
+                      cex = 0.4,
+                      ggtheme = theme_minimal())
+g
+ggsave(g, file = paste0(here::here(),"/paper/figures/country_similarity/hierarchical_dummy_2004.png"), height = 12, width = 8, units = "in")
+```
+
+### Map
+```{r}
+km <- factoextra::eclust(iiss_dummy, "kmeans", nstart = 25)
+
+kmeans <- factoextra::fviz_cluster(km,
+                         geom = "point",
+                         point = 1,
+                         ellipse.type = "confidence",
+                         main = "",
+#                         palette = "Dark2",
+                         ggtheme = theme_minimal(),
+                         data = iiss_dummy) +
+  theme(legend.position = "bottom")
+
+# PCA dimensionality reductions
+pca <- prcomp(iiss_dummy, scale = FALSE)
+
+# Coordinates of individuals
+ind.coord <- as.data.frame(factoextra::get_pca_ind(pca)$coord)
+
+# Add clusters obtained using the K-means algorithm
+ind.coord$cluster <- factor(km$cluster)
+
+# Add Species groups from the original data sett
+ind.coord$name <- rownames(ind.coord)
+
+# Variance explained by each dimensions
+eigenvalue <- round(factoextra::get_eigenvalue(pca), 1)
+variance.percent <- eigenvalue$variance.percent
+
+clusters <- ind.coord
+
+# clusters$name <- countrycode::countrycode(clusters$states, "cowc", "country.name")
+
+# Fix some country names manually
+clusters$name[clusters$name == "Us"] <- "USA"
+clusters$name[clusters$name == "United Kingdom"] <- "UK"
+clusters$name[clusters$name == "Congo - Kinshasa"] <- "Democratic Republic of the Congo"
+clusters$name[clusters$name == "Congo - Brazzaville"] <- "Republic of Congo"
+clusters$name[clusters$name == "Czechia"] <- "Czech Republic"
+
+## Make map
+WorldData <- map_data('world')
+
+theme_map <- function(base_size = 9, base_family = "") {
+  theme_bw(base_size = base_size, base_family = base_family) %+replace%
+    theme(axis.line = element_blank(),
+          axis.text = element_blank(),
+          axis.ticks = element_blank(),
+          axis.title = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_blank(),
+          panel.grid = element_blank(),
+          panel.spacing = unit(0, "lines"),
+          plot.background = element_blank(),
+          legend.justification = c(0, 0)#,
+          #legend.position = c(1,1)
+          )
+}
+
+kmap <- ggplot() +
+  geom_map(data = WorldData,
+           map = WorldData,
+           aes(group = group,
+               map_id = region),
+           fill = "white",
+           size = 0.35) +
+  geom_map(data = clusters,
+           map = WorldData,
+           aes(fill = cluster,
+               map_id = name)) +
+#  scale_fill_brewer(palette = "Dark2") +
+  borders("world",
+          size = 0.25,
+          colour = "black") +
+  theme_map() +
+  coord_cartesian(ylim = c(-50, 90)) +
+  theme(legend.position = "none") +
+  labs(title = "",
+       fill = "Cluster")
+
+p_dual <- ggpubr::ggarrange(kmeans, kmap,
+                  ncol = 1,
+                  nrow = 2)
+p_dual
+p_dual <- ggpubr::annotate_figure(p_dual, top = "Country Tech Portfolio Similarity Clusters (2014)")
+ggsave(p_dual, file = paste0(here::here(),"/paper/figures/country_similarity/kmeans_dummy_map.png"), height = 8, width = 8, units = "in")
+```
+
+# Dimensionsality reduction
+See what clusters exist among the 74 technologies to see if we actually need all of them. We do this using UMAP
+https://rpubs.com/Saskia/520216
+```{r}
+# Prep both versions
+df_long <- readRDS(file = paste0(here::here(), "/data/01z_rDMC_long.rds")) %>%
+  dplyr::filter(year == 2004) %>%
+  dplyr::select(-c(year, stateabb, ccode)) %>%
+  dplyr::group_by(tek) %>%
+  dplyr::mutate(equipment_ratio = round(unit_count/sum(unit_count, na.rm = TRUE), 2)) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-unit_count) %>%
+  tidyr::spread(key = tek,
+                value = equipment_ratio) %>%
+  replace(is.na(.), 0) %>%
+  janitor::remove_empty() %>%
+  janitor::remove_constant() %>%
+  tibble::column_to_rownames(var = "country")
+
+df_wide <- readRDS(file = paste0(here::here(), '/data/01z_rDMC_wide.rds')) %>%
+  dplyr::filter(year == 2014) %>%
+  tidyr::unite(col = "rowname", country, year, remove = TRUE) %>%
+  dplyr::select(-c(stateabb, ccode)) %>%
+  tibble::column_to_rownames(var = "rowname") %>%
+  replace(is.na(.), 0) %>%
+  dplyr::filter_all(dplyr::any_vars(. != 0))
+
+# PCA
+Spectrum::Spectrum(df_long,
+                   showpca = TRUE)
+
+# Rtsne
+tsne_cereals_num <- Rtsne::Rtsne(df_wide,
+                                 pca = FALSE,
+                                 perplexity = 10,
+                                 theta = 0.0)
+
+tsne_cereals_num <- data.frame(TSNE1 = tsne_cereals_num$Y[, 1],
+                               TSNE2 = tsne_cereals_num$Y[, 2])
+
+ggplot(tsne_cereals_num,
+       aes(x = TSNE1,
+           y = TSNE2)) +
+  geom_point()
+
+# uwot
+umap_cereals_num <- uwot::umap(df_wide,
+                               n_neighbors = 15,
+                               min_dist = 1,
+                               spread = 5)
+
+umap_cereals_num <- data.frame(UMAP1 = umap_cereals_num[, 1],
+                               UMAP2 = umap_cereals_num[, 2])
+
+ggplot(umap_cereals_num, 
+       aes(x = UMAP1, 
+           y = UMAP2)) +
+  geom_point()
+
+# autoencoder
+ruta_cereals_num <- ruta::autoencode(as.matrix(df_wide),
+                                     dim = 2,
+                                     type = "robust", 
+                                     activation = "tanh",
+                                     epochs = 100)
+
+ruta_cereals_num <- data.frame(RUTA1 = ruta_cereals_num[, 1],
+                               RUTA2 = ruta_cereals_num[, 2])
+
+ggplot(ruta_cereals_num, aes(x = RUTA1,
+                             y = RUTA2)) +
+  geom_point()
+
+# biplot
+pca_cereals_num <- prcomp(df_wide)
+
+autoplot(pca_cereals_num,
+         data = df_wide,
+         loadings = TRUE,
+         loadings.colour = "blue",
+         loadings.label = TRUE,
+         loadings.label.size = 3)
+```
+
+# Country caterpillar
+## US
+```{r}
+iiss <- readRDS(file = paste0(here::here(), "/data/01z_rDMC_long.rds"))
+
+g <- iiss %>%
+  tidyr::separate(col = tek, into = c("parent", "child"), sep = "_", remove = TRUE) %>%
+  dplyr::select(country, year, parent, unit_count) %>%
+  dplyr::group_by(country, year, parent) %>%
+  dplyr::summarize(equipment_count = sum(unit_count, na.rm = TRUE)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(parent = as.factor(parent)) %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(equip_scale = round(scale(equipment_count), 1)) %>%
+  dplyr::mutate(type = dplyr::if_else(equip_scale < 0, "below", "above")) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-equipment_count) %>%
+  dplyr::mutate(parent = stringr::str_to_title(parent)) %>%
+  dplyr::filter(country == "us",
+                stringr::str_detect(year, "4$"),
+                year != 1974) %>%
+  ggplot(aes(x = reorder(factor(parent), dplyr::desc(parent)), 
+             y = equip_scale,
+             label = equip_scale)) +
+  geom_segment(aes(x = parent,
+                   xend = parent,
+                   y = 0,
+                   yend = equip_scale)) +
+  geom_point(aes(col = type),
+             stat = 'identity',
+             size = 6) +
+  geom_text(color = "black",
+            size = 2.5) +
+  coord_flip() +
+  scale_color_brewer(palette = "Accent") +
+  scale_x_discrete(limits = rev) +
+  facet_wrap(~ year, scales = "free_x") +
+  labs(title = "US Military Capabilities Compared to Global Average",
+       caption = "Note: Bars represent standard deviations from the annual mean for each category.",
+       x = "",
+       y = "Standard Deviation") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 2),
+        text = element_text(size = 16),
+        legend.position = "none")
+
+g
+
+ggsave(g, file = paste0(here::here(),"/paper/figures/country_ratios/lollipop_sd_us.png"), height = 8, width = 8, units = "in")
+```
+
+## Most average country
+```{r}
+iiss %>%
+  tidyr::separate(col = tek, into = c("parent", "child"), sep = "_", remove = TRUE) %>%
+  dplyr::select(country, year, parent, unit_count) %>%
+  dplyr::group_by(country, year, parent) %>%
+  dplyr::summarize(equipment_count = sum(unit_count, na.rm = TRUE)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(parent = as.factor(parent)) %>%
+  dplyr::group_by(year, parent) %>%
+  dplyr::mutate(equip_scale = round(scale(equipment_count), 1)) %>%
+  dplyr::mutate(type = dplyr::if_else(equip_scale < 0, "below", "above")) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-equipment_count) %>%
+  dplyr::mutate(parent = stringr::str_to_title(parent)) %>%
+  dplyr::group_by(country, year) %>%
+  dplyr::mutate(avg = round(mean(equip_scale, na.rm = TRUE), 2)) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(country, year, avg) %>%
+  dplyr::distinct() %>%
+  dplyr::group_by(year) %>%
+  dplyr::filter(abs(avg - 0) == min(abs(avg - 0))) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(year)
+```
