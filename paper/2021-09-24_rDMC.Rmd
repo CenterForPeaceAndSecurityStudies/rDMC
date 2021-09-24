@@ -1,15 +1,11 @@
 ---
 title: '\singlespacing Planes, Trains, and Armored Mobiles: Introducing a Dataset of the Global Distribution of Military Capabilities (rDMC)'
 author: | 
-  |  J Andr$\'{e}$s Gannon^[Email: \texttt{jagannon@hks.harvard.edu}. Web: \texttt{jandresgannon.com}. \newline See \texttt{https://www.militarycapabilities.com/} for a website of the complete project. Data and code for the empirical analysis can be found at \texttt{https://github.com/CenterForPeaceAndSecurityStudies/rDMC}. This projected was funded and produced by the UC San Diego Center for Peace and Security Studies.]
   | Belfer Center for Science and International Affairs
   | Harvard Kennedy School
+  |  J Andr$\'{e}$s Gannon^[Email: \texttt{jagannon@hks.harvard.edu}. Web: \texttt{jandresgannon.com}. \newline See \texttt{https://www.militarycapabilities.com/} for a website of the complete project. Data and code for the empirical analysis can be found at \texttt{https://github.com/CenterForPeaceAndSecurityStudies/rDMC}. This projected was funded and produced by the UC San Diego Center for Peace and Security Studies.]
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
-  bookdown::pdf_document2:
-    number_sections: yes
-    toc: no
-    keep_tex: yes
   bookdown::html_notebook2:
     fig_height: 8
     fig_width: 12
@@ -19,6 +15,10 @@ output:
     toc_depth: 5
     toc_float:
       collapsed: yes
+  bookdown::pdf_document2:
+    number_sections: yes
+    toc: no
+    keep_tex: yes
   bookdown::word_document2: default
   bookdown::word_document:
     toc: no
