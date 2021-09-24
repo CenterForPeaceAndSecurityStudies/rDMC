@@ -4,11 +4,11 @@ The rDMC github repository contains all the data and code necessary to produce t
 
 ## Installation
 
-You can install IISS from GitHub with:
+You can install rDMC from GitHub with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("CenterForPeaceAndSecurityStudies/IISS")
+devtools::install_github("CenterForPeaceAndSecurityStudies/rDMC")
 ```
 
 ## Important files
