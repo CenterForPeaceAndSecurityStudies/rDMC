@@ -13,11 +13,11 @@ devtools::install_github("CenterForPeaceAndSecurityStudies/IISS")
 
 ## Important files
 ### Tabular Data
-rDMC raw [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_raw.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/01z_rDMC_raw.rds)
+rDMC raw - [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_raw.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/01z_rDMC_raw.rds)
 
-rDMC wide [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_wide.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/01z_rDMC_wide.rds)
+rDMC wide - [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_wide.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/01z_rDMC_wide.rds)
 
-rDMC long [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_long.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/01z_rDMC_long.rds)
+rDMC long - [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_long.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/01z_rDMC_long.rds)
 
 ### Paper
-[Description of the data](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/paper/2021-09-24_rDMC.pdf)
+Planes, Trains, and Armored Mobiles: Introducing a Dataset of the Global Distribution of Military Capabilities (rDMC) [pdf](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/paper/2021-09-24_rDMC.pdf), [html]()
