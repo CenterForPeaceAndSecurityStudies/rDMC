@@ -14,7 +14,9 @@ devtools::install_github("CenterForPeaceAndSecurityStudies/IISS")
 ## Important files
 ### Tabular Data
 rDMC raw [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_raw.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/01z_rDMC_raw.rds)
+
 rDMC wide [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_wide.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/01z_rDMC_wide.rds)
+
 rDMC long [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_long.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/01z_rDMC_long.rds)
 
 ### Paper
