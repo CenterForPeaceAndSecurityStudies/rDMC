@@ -24,9 +24,6 @@ a <- gsub("*", "", iiss$unit_name, fixed=TRUE)
 iiss$unit_name <- a
 
 iiss$equipment_name[iiss$equipment_name == "?"] <- NA
-
-# Drop troops
-iiss <- iiss[!iiss$unit_name == "troops", ]
 ```
 
 ## Air defence
@@ -5919,6 +5916,9 @@ iiss$equipment_name[iiss$unit_name == "Mi-26"] <- "TPT"
 
 iiss$equipment_name[iiss$unit_name == "Mi-8 Hip"] <- "TPT"
 
+iiss$equipment_name[iiss$unit_name == "hel"] <- "UTL"
+iiss$unit_name[iiss$unit_name == "hel"] <- NA
+
 # Equipment_subtype
 iiss$equipment_subtype[iiss$unit_name == "Ka-25 Hormone"] <- NA
 
@@ -8939,6 +8939,10 @@ iiss$equipment_type[iiss$unit_name == "STRIDA II"] <- "radars"
 iiss$equipment_subtype[iiss$unit_name == "STRIDA II"] <- NA
 iiss$equipment_name[iiss$unit_name == "STRIDA II"] <- "CONTROL"
 
+iiss$unit_name[iiss$equipment_type == "air defence" &
+                 iiss$equipment_name == "radar" &
+                 iiss$unit_name == "sqns"] <- NA
+
 # Equipment_subname
 iiss$equipment_subname[iiss$unit_name == "RATRAS"] <- NA
 
@@ -10765,13 +10769,9 @@ iiss <- iiss %>%
 iiss <- iiss %>%
   dplyr::filter(!(unit_name == "trials" & equipment_type == "surface-to-surface missile launchers"))
 
+#######
 iiss <- iiss %>%
-  dplyr::filter(!(unit_name == "sqns" |
-                  unit_name == "ac" |
-                  unit_name == "hel"))
-
-iiss <- iiss %>%
-  dplyr::filter(!unit_name == "Sea Dart")
+  dplyr::filter(unit_name != "Sea Dart" | is.na(unit_name))
 
 iiss <- iiss %>%
   dplyr::filter(!((equipment_name == "FFG" | equipment_name == "FFGHM") & equipment_type == "surface-to-surface missile launchers"))
@@ -10783,7 +10783,7 @@ iiss <- iiss %>%
   dplyr::filter(!(equipment_type == "battalion"))
 
 iiss <- iiss %>%
-  dplyr::filter(!(unit_name == "Mk46"))
+  dplyr::filter(unit_name != "Mk46" | is.na(unit_name))
 
 iiss <- iiss %>%
   dplyr::filter(!(equipment_type == "helicopters" & equipment_name == "LPH" & (unit_name == "Helicopter" | unit_name == "Helicopter Support")))

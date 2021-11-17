@@ -35,7 +35,7 @@ library(tidyverse)
 # Manual load
 r import merge excel files multiple sheets site:stackoverflow.com
 ```{r}
-files <- list.files(paste0(here::here(), '/data/manual_download/'), "\\.xlsx$", full.names = TRUE)
+files <- list.files(paste0(here::here(), '/data/original/'), "\\.xlsx$", full.names = TRUE)
 
 read_excel_allsheets <- function(filename) { 
   sheets <- readxl::excel_sheets(filename) 
@@ -65,6 +65,7 @@ for(i in 1:57){
 # Join all data and save file
 ```{r}
 IISS_full <- do.call(rbind.data.frame, by_year)
+
 # Remove .id column 
 IISS_full[,".id"] <- NULL
 

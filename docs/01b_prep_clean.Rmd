@@ -66,7 +66,7 @@ iiss <- readRDS(file = paste0(here::here(), '/data/01a_load.rds')) %>%
 # Add country name variables
 To make merging with other datasets easier, we need to include other variations of country names.
 ```{r include = FALSE}
-country_meta <- read.csv(file = paste0(here::here(), '/data/IISS_supp_iiss_countries.csv'))
+country_meta <- read.csv(file = paste0(here::here(), '/data/aux/IISS_supp_iiss_countries.csv'))
 ```
 
 # Column checks
@@ -434,7 +434,7 @@ source_rmd <- function(file, local = FALSE, ...){
 tictoc::tic()
 
 for(i in c(1:2)){
-  source_rmd(paste0(here::here(), "/docs/01_DV_Prep/01b_prepIISS_supp.Rmd"))
+  source_rmd(paste0(here::here(), "/docs/01b_prep_clean-supp.Rmd"))
 }
 
 tictoc::toc()
@@ -1225,7 +1225,7 @@ abb_match$original <- 1
 
 abbs <- dplyr::left_join(abb, abb_match)
 
-write.csv(abbs, paste0(here::here(), "/data/","equipment_name_abbrevs.csv"))
+write.csv(abbs, paste0(here::here(), "/data/aux/","equipment_name_abbrevs.csv"))
 ```
 
 ## Non-alphanumeric values 
@@ -1330,7 +1330,7 @@ Creates a dataframe for equipment unit counts per country/year.
 ```{r}
 df <- country_year_equip_df(iiss)
 df
-saveRDS(df,paste0(here::here(),"/data/","Country_Year.rds"))
+saveRDS(df,paste0(here::here(),"/data/aux/","Country_Year.rds"))
 ```
 
 # Save cleaned, final dataset

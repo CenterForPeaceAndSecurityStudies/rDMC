@@ -56,7 +56,7 @@ df_sum <- df %>%
 ## Create true country-year list
 This is a list of all the recognized country-years from 1970-2014
 ```{r}
-states <- read.csv(paste0(here::here(), "/inst/extdata/COW/","system2016.csv")) %>%
+states <- read.csv(paste0(here::here(), "/inst/extdata/","system2016.csv")) %>%
   dplyr::mutate(in_cow = 1) %>%
   dplyr::filter(year >= 1970) %>%
   dplyr::select(-version)
