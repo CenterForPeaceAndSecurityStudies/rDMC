@@ -79,17 +79,11 @@ Domestically, the portfolio of military capabilities also informs questions outs
 
 The combination of capabilities that comprise a military's toolkit determine the operations it undertakes, the types of threats it can credibly make, and the consequences of resorting to force. Military means likely matter, but proving that they do (and if so, the degree and circumstance) is an impossible endeavor without empirical data on the distribution of those means across time and space. Despite the importance of disaggregated military capabilities and a recognition of the shortcomings of aggregate measures for explaining concepts of interest, most current research uses measures only of the *size* of state militaries [@ward_sizingpeacedividend_1992; @sample_outcomesmilitarybuildups_2002; @nordhaus_effectsinternationalsecurity_2012; @cappellazielinski_whatgoesmust_2017; @alley_budgetbreakerfinancial_2021].[^1] National militaries are primarily quantified and compared by military spending levels or, in rarer cases, military personnel counts. Yet, defense dollars don't tell us what capabilities a state can actually use during a conflict. Despite its frequent use, data on military spending also poses known problems for quantitative cross-national and temporal comparison [@perlo-freeman_monitoringmilitaryexpenditure_2017]. Since there are no common definitions about what constitutes military spending, some states measure things like pension and R&D while others do not [@amara_unfulfilledpromisesimpact_2010]. Exchange rates are often used to standardize all spending to the same currency, but with ill-information applications of domestic purchasing power [@fontanel_comparisonmilitarybudgets_1996]. Difficulty accounting for inflation and budget cycles also dramatically impacts inferences drawn from different data sources [@lebovic_usingmilitaryspending_1999]. The IMF, UN Office for Disarmament Affairs, US Bureau of Arms Control, Verification, and Compliance, International Institute for Strategic Studies (IISS), and Stockholm International Peace Research Institute (SIPRI) all produce annual military spending estimates using different estimating procedures, primary sources, and preparation methods [@brzoska_reportingmilitaryexpenditures_1981], meaning findings from one data source are often not supported using comparable data from another source [@boniface_anneestrategique1995_1995]. Since the cost of military platforms has increased over time, having data on the actual platforms helps get around the problems of accounting for military "purchasing power" over time.
 
-[^1]: Of course, these two are not synonymous. Military capabilities are only one component of military spending and the cost of labor is a large component of military spending [@whitten_butterygunswelfare_2011].
-
 Research on variation in the *composition* of militaries remains nascent. Scholars have noted "there is a lack of knowledge about variation between states in their behavior on armaments policy decisions" because of problems empirically identifying the military capabilities states possess [@mawdsley_armamentsdecisionmakingare_2018]. Recent works that disaggregate military capabilities have narrowed their focus to a small set of platforms like mechanized vehicles [@lyall_ragemachinesexplaining_2009; @sechser_armyyouhave_2010], strategic lift aircraft [@kupchan_natopersiangulf_1988], principal naval platforms [@crisher_powerseanaval_2014], or fighter jets [@saunders_commandskiesairpower_2020] or to a small set of countries like great powers [@brooks_risefallgreat_2016] or China and its regional rivals [@beckley_emergingmilitarybalance_2017]. Even the most detailed of these are selective in their disaggregation; @saunders_commandskiesairpower_2020 do not include bombers, air transport, or support aircraft, @sechser_armyyouhave_2010 omit helicopters, and @souva_materialmilitarypower_2022 aggregates all capabilities to five categories (nuclear weapons, naval tonnage, air power, armor, and ballistic missiles) . The primary reason for this relatively limited use of fine-grained high-quality data is difficulty in converting the data to an easily-usable format and standardizing it across countries and years. rDMC aims to overcome all of these problems in being a massively expanded dataset that better enables systematic analysis across time, space, and military capability.
 
 # The rDMC dataset: scope and data generating process
 
 This paper uses the annual International Institute for Strategic Studies (IISS) Military Balance reports [-@internationalinstituteforstrategicstudies_militarybalance_] to create a structured and machine-readable dataset of disaggregated military capabilities measured as the annual count of military capabilities owned by `r scales::comma(dplyr::n_distinct(rdmc_raw$country))` countries from 1970 -- 2014. By military capabilities, I mean the technologies, weapons, and equipment that states can use in combat operations, excluding small arms like handguns and rifles and also excluding munitions and bombs for which annual data is unreliable.[^2] The data were coded by a team of 39 undergraduate coders from four universities over the past five years, resulting in `r scales::comma(nrow(rdmc_raw))` unique observations. Figure \ref{fig:missingness} shows the percent of years coded for each country. 54% of countries have no missing data across the entire time span (including the majority of the great powers), with the median country having data available for 95% of its years and the mean country having 88% coverage.[^3] The data and all code used to process, clean, and analyze the data are publicly available at (website redacted).
-
-[^2]: See the section "Defining military capabilities" in the codebook for a more detailed definition of military capabilities.
-
-[^3]: I use percent of years since not all countries exist across the entire duration of the data. 100% of Slovenia is covered, for example, because data exists for all 22 years since since it established independence in 1991.
 
 ```{r}
 #| label: missingness
@@ -202,8 +196,6 @@ ggplot() +
 
 Policymakers frequently use the IISS Military Balance to guide their decisions. The former Supreme Allied Commander of NATO, Admiral James Stavridis, said "throughout my career, I have relied extensively on The Military Balance produced so expertly by the IISS. It is the"go to" source for serious analysts and warriors facing real world challenges." Former US Army General Petraeus describes it as "the go-to source of unclassified, independent information on defense capabilities around the world". Similarly, former US Secretary of Defense Robert Gates noted it "provides essential facts and analysis for decision-makers and for better informed public debate" and former US Secretary of Defense Leon Panetta remarked it is "widely recognised as the best unclassified source of defense information on personnel, equipment and budgets for every country."[^4]
 
-[^4]: Quotes come from [IISS Testimonials](https://www.iiss.org/publications/the-military-balance)
-
 As with much data in international affairs, concerns about data quality and accuracy remain salient. The extensive use of the IISS Military Balance by policymakers as well as by other scholars gives confidence in its accuracy and allows for the data codings to be validated. Most of this academic work has used IISS data on military spending [@wohlforth_stabilityunipolarworld_1999; @greenhill_perilsprofilingcivil_2007] or personnel [@stanton_terrorismcontextcivil_2013; @gaibulloev_personnelcontributionsnonun_2015]. Recent works by @lyall_ragemachinesexplaining_2009, @sechser_armyyouhave_2010, @brooks_risefallgreat_2016, and @caverley_militarytechnologyduration_2017 use detailed information from the IISS Military Balance on platforms like mechanized vehicles and power projection platforms. The accuracy of the data has also been double checked in instances where there are reliable primary source data from government reports. New Zealand, for example, publishes annual reports on the military's performance targets that describe the resources at the military's disposal [@alexander_countrysurveyxvii_2002]. Although such data is not available for all countries nor for all years, checking the data where possible provides face validity about its accuracy.
 
 However, being the most comprehensive data on military capabilities and from a highly reputable source does not guarantee accuracy. States themselves are uncertain about the military capabilities of others, and more pronounced uncertainty likely exists in the open source data used here [@kaplow_determinantsuncertaintyinternational_2021]. Earlier years may have less accurate coverage as both private and government intelligence and surveillance efforts were less sophisticated, making it harder to know the capabilities of states that were far away [@lin-greenberg_privateeyessky_2021]. New Zealand's transparency in capability reports is an anomaly, as many countries -- particularly those of interest to security scholars like Russia and China -- try to deceive their foes (or even friends) by misrepresenting their capabilities by exaggerated or underplaying their strength in particular platforms [@mastro_vulnerabilityrisingpowers_2016; @mawdsley_comparingmilitarieschallenges_2016]. Weapons systems also differ in whether open source intelligence is likely to identify them correctly, as capabilities whose effectiveness relies on secrecy and deception may not be known to the rest of the world until they are used [@green_concealrevealmanaging_2020]. It is important that scholars acknowledge this limitation and, where possible, take steps to address it. For example, biases in GDP estimates have been identified using night-time-light data gathered from satellites, allowing scholars to quantify the extent to which autocratic regimes exaggerate their economic growth [@martinez_howmuchshould_2022]. In the future, similar measures could be applied to rDMC by, as has been done with Russia in the invasion of Ukraine, combining reports about military use and loss during combat to pre-war inventory estimates [@zhukov_viinaviolentincident_].
@@ -236,12 +228,6 @@ The first step of the data collection process creates a consistent typology of m
 
 *rDMC raw* provides an unaltered version of the original data without subjective coding decisions or equipment categorizations. IISS categorizes military capabilities in five descending levels: equipment types, equipment subtypes, equipment names, equipment subnames, and unit names.[^5] An example is provided in Figure \@ref(table:equipment). Equipment type involves the most aggregate categorizations ("aircraft" or "armored fighting vehicles"). Equipment names are the next primary IISS categorization ("transport" or "fighter" aircraft). Subtype and subname are auxiliary classifications that exist for some, but not all technologies (designations of "light", "medium", and "heavy" transport aircraft or "FFM" frigates with surface to air missiles). Lastly, the unit names identifies specific models ("M1A1 Abrams" tank). *rDMC raw* is the only version of the data that provides this unit-level information.[^6] In this way, scholars can used the disaggregated data to identify, for example, how many countries have Aim-9 Sidewinder missiles in each year. Comparisons across country and year are possible, provided the research is careful in noting different naming conventions at the unit level.[^7]
 
-[^5]: While these 5 classifications levels are produced by IISS, their labels are the author's.
-
-[^6]: Standardizing string variables across unit names is a challenging endeavor that will be advanced in future iterations of the data. For more information about using the unit-level information in *rDMC raw*, see the appendix.
-
-[^7]: For example, entries exist for the "AIM-9", "AIM-9 Sidewinder", "Aim-9", and "Aim-9 Sidewinder", which all refer to the same capability but with differences in capitalization and punctuation. rDMC 2.0 will standardize the unit-level names, but the time-intensive nature of that effort means it will not be completed for some time.
-
 ```{=tex}
 \begin{singlespace}   
 \begin{table}[h]
@@ -263,8 +249,6 @@ The first step of the data collection process creates a consistent typology of m
 \end{singlespace}
 ```
 *rDMC raw* can be used to examine questions concerning topics like combat effectiveness, arms sales, and interest group lobbying. Scholars have identified the challenges of identifying observable ex-ante proxies for the military effectiveness of particular platforms [@brooks_creatingmilitarypower_2007]. @biddle_militarypowerexplaining_2005 [135] uses the age of a military capability as a proxy for its effectiveness. During Operation Desert Storm, the average date of introduction for US weapons was 1974 while Iraq's was 1962, with the assumption being that newer capabilities were more advanced. But until now, broader measures of the age of different components of a state's military portfolio have remained un-examined. Figure \ref{fig:mbt-invention} shows a broader comparison of the age of introduction for each main battle tank in the data as well as its last recorded year in service. The year of introduction is identified as the first year in which at least one state possessed that type of tank.[^8] Scholars could broaden Biddle's analysis beyond the Gulf War by identifying differences in predicted battlefield performance across generations of all types of technologies. This exercise also serves as a method of data validation, as the data are consistent with historical accounts concerning the development of many of these tanks like the M1 Abrams entering service in 1980 and the Japanese Type 10 being developed in 2012 [@ludeke_internationaltankdevelopment_2018].
-
-[^8]: Since the data starts in 1970, tanks first deployed in 1970 most likely represent models developed before then. A more thorough analysis would track down the actual deployment date for each tank model, rather than relying on their deployment date as done here. Importantly, the data does distinguish between different platform upgrades, differentiating an F-16A from an F-16B in most cases.
 
 ```{r}
 #| label: mbt-invention
@@ -717,8 +701,6 @@ ggplot(world_tek_eqpt_name,
 
 *rDMC long* and *rDMC wide* provide a new, aggregated typology of national military capabilities.[^9] The `r scales::comma(dplyr::n_distinct(rdmc_long$tek))` categories that comprise the technologies are shown in Figure \ref{fig:dendrogram}. These categories were chosen because they represent weapons categories commonly recognized and used by states in arms reduction agreements like the Treaty on Conventional Armed Forces in Europe (CFE). As a result, national records are most consistent and accurate at this level of analysis since those records were used during international negotiations. The resulting data provides a count of, for example, "aircraft -- transport" for every country with a value that is the sum of all the rows in *rDMC raw* that had the original 5-level categorizations that match the new "aircraft - transport" category.
 
-[^9]: *rDMC long* and *rDMC wide* are identical in terms of scope and values and differ only in the unit of analysis. In *rDMC long* the unit of analysis is the country-year-technology while in *rDMC wide* the unit of analysis is the country-year. They are both provided to simplify the process of merging with existing datasets much like the Alliance Treaty Obligations and Provisions (ATOP) provides alliance data at various units of analysis [@leeds_alliancetreatyobligations_2002].
-
 ```{r}
 #| label: dendrogram
 #| fig-cap: "Description of the disaggregated technology categories used to compute the distribution of military capabilities."
@@ -730,8 +712,6 @@ knitr::include_graphics(path = paste0(here::here(), "/paper/figures/dendrogram_s
 
 Empirically, this new typology is helpful because the technology categories are definitionally uniform across the data sample. Unlike *rDMC raw*, the new typology is standardized so it is consistent across country and year, thus simplifying time series-cross sectional comparisons. Where inconsistencies arise, transparent coding decisions were made with reference to external sources documented in the code repository. This ensure that, for example, the C-130H Hercules is always listed with an equipment type coding of 'aircraft' and an equipment name coding of 'transport (TPT)'.[^10] Aggregating the technology categories also reduces the sparseness of a dataset that is already zero-inflated. While most country-years possess armored fighting vehicles, not all possess every kind of armored fighting vehicle (main battle tanks, armored personnel carriers, armored infantry fighting vehicles, and reconnaissance vehicles) let alone each of the `r rdmc_raw %>% dplyr::filter(equipment_type == "armoured fighting vehicles") %>% dplyr::summarise(count = scales::comma(dplyr::n_distinct(unit_name)))` distinct units categorized as "armored fighting vehicles". That is not to say that every type or model is the same; but those distinctions present computational challenges for broad international relations questions. Scholars interested in making those distinctions are advised to use the *rDMC raw* version of the data.
 
-[^10]: There are cases where an equipment's category changes in ways the data maintains. For example, many aircraft and helicopters are phased out by being shifted to non-combat roles like training before they are fully retired. A country may thus experience a decrease in combat aircraft and an increase in training aircraft from one year to the next without the actual aircraft they possess changing.
-
 There are, of course, many ways to categorize technologies depending on the research question. Disagreement over the categories produced by *rDMC long* and *rDMC* *wide* are remedied by the existence of *rDMC raw* that can be used by scholars to produce their own categorizations. "Aircraft -- transport" and "helicopters -- transport" could be considered somewhat interchangeable to those interested in a state's ability to move personnel and material. Alternatively, "helicopters -- transport" and "helicopters -- search and rescue" may be reasonably combined if studying arms sales or military base location given their similar physical make-up. In other cases, categories could be further *dis*aggregated. The category "aircraft -- maritime patrol", for example, include anti-submarine warfare, anti-surface warfare, and maritime reconnaissance which all "patrol" different areas of the sea. Rather than try to create and justify a single definitive ontology of military technologies, the data are constructed so that all aggregations are transparent and modular. By simply selecting new aggregation categories, scholars can produce their own counts with different categories to produce a new dataset consistent with classifications that suit their research question.
 
 # Global Trends
@@ -741,8 +721,6 @@ This section identifies some descriptive trends in military capabilities across 
 ## Technological Trends Across Time
 
 *rDMC* can shed light on topics like military diffusion and military effectiveness by providing empirical data about how militaries change over time [@horowitz_diffusionmilitarypower_2010; @gilli_spreadmilitaryinnovations_2014]. For example, research on military diffusion has argued that the rate at which weapons technologies spread to other states around the globe influences the likelihood of war [@bas_armsdiffusionwar_2012] as well as its outcomes [@zarzecki_armsdiffusionspread_2002]. For example, much has been written about the consequences of aerial bombing [@pape_bombingwinair_1996; @allen_understandingimpactair_2017]. Although this research has looked at cases where states used aerial bombing, it does not identify what states have the capacity to conduct aerial bombing or how that changes over time.[^11] Figure \ref{fig:aircraft} shows annual changes in the total number of military aircraft as well as changes in the annual average across all states. The end of the Cold War in 1991 is an important turning point in both respects. The number of total military aircraft in the world dropped from roughly 40,000 to just over 20,000 and the average military aircraft per country went from around 400 to just under 200. Why such a significant reduction in combat aircraft worldwide? Part of the explanation may be the Adapted Treaty on Conventional Armed Forces in Europe (CFE) which required NATO and the Warsaw Pact -- referred to in the CFE as the "Groups of States" -- to each maintain no more than 6,800 combat aircraft [@bolving_adaptedtreatyconventional_2000]. This resulted in the destruction of 69,000 military units designated as Treaty Limited Equipment, with the Warsaw Pact destroying over 30% of its arsenal and NATO destroying 5% [@mccausland_europeaneurasiansecurity_2012].
-
-[^11]: New data on combat aircraft has recently been produced by @saunders_commandskiesairpower_2020.
 
 ```{r}
 #| label: aircraft
@@ -844,10 +822,6 @@ rdmc_long %>%
 When do states' military portfolios most closely mirror those of others? Some scholars argued socialization and competition under anarchy results in convergence, whereby states emulate the capabilities of the most powerful states in the international system [@waltz_theoryinternationalpolitics_1979 p 127; @resende-santos_anarchyemulationmilitary_1996 p 196] while others have noted functional differentiation across allies who produce distinct, complementary military assets [@gannon_usetheirforce_2021]. Although there are instances of Cold War military planners falling prey to the homeopathy heuristic by embracing "missile matching" vis-à-vis their rivals [@kanwisher_cognitiveheuristicsamerican_1989], systematic evidence of similarity or difference across states' militaries has remained empirically untested. This claim is significant for scholars of international politics. If states mirror the military capabilities of others, then "new and proven military methods, even if they are truly revolutionary, will have no lasting affect on the balance of international influence" [@goldman_systemiceffectsmilitary_1999, p 83]. This also has implications for what we know about security cooperation, with scholars cautioning that states imitating the military practices of their peers "rarely resort to alliances for their security" [@parent_balancingneorealism_2015 p 52].
 
 *rDMC* allows the similarity of militaries around the world to be identified and quantitatively measured. Figure \ref{fig:country-clusters} shows the results of a k-means clustering analysis for all states in 1994 using binary values indicating whether a state possessed each of the 74 military technologies.[^12] A form of community detection, k-means clustering is an un-supervised learning algorithm that partitions the data into clusters of most-similar states using a gap statistic identifying the optimal number of groups [@tibshirani_estimatingnumberclusters_2001].[^13] There are eight distinct clusters of countries that share significant commonality in the military capabilities they possess. Some great powers are similar to one another (the US, Russia, France, and UK), but others appear more distinct (China). In some cases the US is similar to allies like Germany and Italy, but not with others like Poland and Canada. There is similarity across states in some geographic regions like Central Asia, but significant dissimilarity across states in other regions like the Pacific Rim.
-
-[^12]: I exclude states with a population below 750,000 as done by @eyre_statusnormsproliferation_1996 and @sechser_armyyouhave_2010. Other states are missing data because they were not yet sovereign states (South Sudan) or because data on military capabilities was not collected for states just after or still in a serious civil conflict (Congo).
-
-[^13]: This clustering method has been used for community detection of economic industries [@delgado_definingclustersrelated_2016], democratization patterns [@gleditsch_diffusioninternationalcontext_2006], and arms sales [@akerman_globalarmstrade_2014].
 
 ```{r}
 #| label: country-clusters
@@ -964,15 +938,17 @@ ggpubr::ggarrange(kmeans, kmap,
 
 Cautioning that Figure \ref{fig:country-clusters} is a simplified example (a single year and using binary rather than count values), the results nonetheless demonstrate the utility of disaggregating military capabilities for identifying similarity in national defense portfolios and generating testable hypotheses concerning the relationship between military composition and factors like technological capacity, geography, threat environment, and conflict history. The fact there are differences in how even similarly-sized states arm themselves is prima facie evidence of the non-fungibility of material military power.
 
-## US and China Polarity
+## Validation and Application: US and China Polarity
 
-@brooks_risefallgreat_2016 argue that the distribution of capabilities is evidence that the US will remain the world's sole superpower and China is far behind militarily. There has been a big debate over this, but that only demonstrates the importance of the claim [@christensen_chinachallengeshaping_2015; @beckley_emergingmilitarybalance_2017; @gilli_whychinahas_2019]. When it comes to measuring the distribution of power, their 3 material elements are military, economic, and technological capacity. They agree that military spending is not a great measure because it doesn't tell us about short-term and immediate capabilities, so they use the command of the commons concept developed by @posen_commandcommonsmilitary_2003 and disaggregate the four components sea (nuclear powered submarines, aircraft carriers, cruisers and destroyers, and principal amphibious ships), space (operating satellites and military satellites), air (heavy UAVs, 4th generation tactical aircraft, 5th generation tactical aircraft, attack helicopters), and infrastructure (airborne early warning and EWAC airacraft, tanker and tanker/transport aircraft, heavy/medium transport helicopters, heavy/medium transport aircraft).
+To validate the accuracy of the data as well as demonstrate how these data can advance existing scholarship, I use rDMC to replicate and temporally expand some of the key findings in @brooks_risefallgreat_2016 concerning the US-China balance of power. @brooks_risefallgreat_2016, 8 argue that the distribution of military capabilities provides evidence that "the United States will long remain the only state with the capability to be a superpower" and China's military advancements have been and will remain slow, ensuring the United States retains a greater military advantage than superpowers have had in previous power transitions. This has remained a topic of great debate, with many scholars agreeing that China is unlikely to militarily match the United States [@cheung_fortifyingchinastruggle_2013; @christensen_chinachallengeshaping_2015; @beckley_emergingmilitarybalance_2017; @gilli_whychinahas_2019] and others taking a more pessimistic view that China's military rise is rapid and consequential [@yunzhuang_chinamilitaryprocurement_2012; @cliff_chinamilitarypower_2015; @mastanduno_partnerpoliticsrussia_2019].
+
+In measuring the distribution of power and identifying what makes a state a superpower, @brooks_risefallgreat_2016 argue that the three material components are military, economic, and technological capacity. In measuring military capacity, they recognize the shortfalls of aggregate measures like military spending and thus disaggregate @posen_commandcommonsmilitary_2003's four categories for "command of the commons" and situate the main elements of power projection-capable military capacity in command of the sea (nuclear powered submarines, aircraft carriers, cruisers and destroyers, and principal amphibious ships), command of space (operating satellites and military satellites), command of the air (heavy unpiloted aerial vehicles, 4th generation tactical aircraft, 5th generation tactical aircraft, and attack helicopters) and infrastructure of command (airborne early warming and control, tanker and tanker/transport aircraft, heavy and medium transport helicopters, and heavy and medium transport aircraft).
 
 BW's point is on this measure, the US is far beyond anyone else (as of 2014) and when compared to China the US is still super far ahead. "The key takeaway is that compared to any previous era except the years between 1991 and the early 2000s, the overall gap in the military realm remains unprecedented in modern international relations" (p 22). They ignore the quality difference and also nukes, so I can do that too
 
 Countries are US, China, Russia, France, GB, India, but in Table 1 on mil spending they include a bunch of other powers (US, China, Japan\*, Germany\*, Russia, France, Britain, India, Brazil\*)
 
-```{r}
+```{r replication-prep}
 # Use rdmc_long for command of the commons capabilities that match
 commons_long <- rdmc_long %>%
   dplyr::mutate(commons = dplyr::if_else(tek == "principal surface combatants_aircraft carrier",
@@ -1068,7 +1044,7 @@ commons_all <- dplyr::left_join(commons_all, names)
 ```{r}
 #| label: china-static
 #| fig-cap: "Replication of Brooks and Wohlforth (2016)"
-#| fig-pos: 'h'
+#| fig-pos: 'H'
 #| fig-height: 10
 #| fig-width: 7
 
@@ -1123,7 +1099,8 @@ commons_all %>%
             hjust = -0.2) +
   scale_y_continuous(labels = scales::percent_format(),
                      position = "right",
-                     expand = c(0, 0)) +
+                     expand = c(0, 0),
+                     limits = c(0, 1.15)) +
   scale_x_discrete(labels = scales::wrap_format(28),
                    limits = rev) +
   coord_flip() +
@@ -1141,8 +1118,8 @@ commons_all %>%
 ```{r}
 #| label: china-timeseries
 #| fig-cap: "US-China share over time"
-#| fig-pos: 'h'
-#| fig-height: 8
+#| fig-pos: 'H'
+#| fig-height: 10
 #| fig-width: 8
 
 commons_all %>%
@@ -1174,43 +1151,86 @@ commons_all %>%
                 capability = dplyr::recode(capability,
                                            'nuclear powered submarines' = "Subs",
                                            'aircraft carriers' = "Carriers",
-                                           'cruisers and destroyers' = "Cruisers/Destroyers",
+                                           'cruisers and destroyers' = "CG/DD",
                                            'principal amphibious ships'= "Amphib",
                                            'heavy uavs' = "UAV",
-                                           '4th generation tactical aircraft' = "4th gen aircraft",
-                                           '5th generation tactical aircraft' = "5th gen aircraft",
-                                           'attack helicopters' = "Attack heli",
-                                           'operating satellites' = "Operating",
-                                           'military satellites' = "Military",
+                                           '4th generation tactical aircraft' = "4th gen",
+                                           '5th generation tactical aircraft' = "5th gen",
+                                           'attack helicopters' = "Atk Hel",
+                                           'operating satellites' = "Non-mil",
+                                           'military satellites' = "Mil",
                                            'airborne ew and control' = "AEW&C",
                                            'tankers' = "Tankers",
-                                           'heavy/ medium transport helicopters' = "Transport heli",
-                                           'heavy/ medium transport aircraft' = "Transport aircraft")) %>%
-  dplyr::mutate(domain = stringr::str_to_title(domain)) %>%
+                                           'heavy/ medium transport helicopters' = "Tpt Heli",
+                                           'heavy/ medium transport aircraft' = "Tpt Aircraft")) %>%
+  dplyr::mutate(domain = stringr::str_to_title(domain),
+                label = dplyr::if_else(year == max(year),
+                                       as.character(capability),
+                                       NA_character_)) %>%
   ggplot(aes(x = year,
              y = gap,
-             fill = capability,
-             label = capability)) +
-  geomtextpath::geom_textsmooth(hjust = 1,
-                                method = "loess",
-                                color = "lightblue") +
-  geom_smooth(aes(group = domain), method = "loess") +
-  geomtextpath::geom_texthline(yintercept = 0,
-                               label = "Parity", 
-                               linetype = 2,
-                               size = 3) +
+             fill = capability)) +
+  geom_vline(xintercept = seq(1989, 2014, by = 5),
+             color = "grey91", 
+             size = .6) +
+  geom_smooth(method = "loess",
+              color = "deepskyblue",
+              se = FALSE,
+              linewidth = 0.5) +
+  ggrepel::geom_text_repel(aes(label = label),
+                           nudge_x = 0.1,
+                           xlim = c(2014, NA),
+                           hjust = 0,
+                           segment.size = .7,
+                           segment.alpha = .5,
+                           segment.linetype = "dotted",
+                           box.padding = .4,
+                           segment.curvature = -0.1,
+                           segment.ncp = 3,
+                           segment.angle = 20) +
+#  geomtextpath::geom_textsmooth(hjust = 0.6, method = "loess", color = "deepskyblue") +
+  geom_smooth(aes(group = domain),
+              method = "loess",
+              color = "deepskyblue4") +
+  geomtextpath::geom_textsegment(x = 1989,
+                                 y = 0,
+                                 xend = 2014,
+                                 yend = 0,
+                                 label = "Parity", 
+                                 linetype = 2,
+                                 size = 3) +
+  coord_cartesian(clip = "off") +
   scale_x_continuous(expand = c(0, 0),
-                     breaks = seq(1989, 2014, 5)) +
-  ylim(-1, 1) +
+                     breaks = seq(1989, 2014, 5),
+                     limits = c(1989, 2020)) +
+  scale_y_continuous(labels = scales::percent_format(),
+                     breaks = seq(-1, 1, 0.5),
+                     expand = c(0, 0),
+                     limits = c(-0.5, 1.2)) +
+  theme_minimal() +
   facet_wrap(~ domain,
-             ncol = 2) +
-  theme_bw() +
+             ncol = 1) +
   theme(text = element_text(size = 14),
         legend.position = "none",
-        axis.title.x = element_blank()) +
+        axis.title.x = element_blank(),
+        strip.text = ggtext::element_textbox(color = "white",
+                                             fill = "deepskyblue4",
+                                             box.color = "deepskyblue4",
+                                             halign = 0.5,
+                                             linetype = 1,
+                                             r = unit(5, "pt"),
+#                                             minwidth = unit(5, "in"),
+                                             width = unit(0.2, "npc"),
+                                             padding = margin(2, 0, 1, 0),
+                                             margin = margin(3, 3, 3, 3)),
+#        strip.text = element_text(hjust = 0.4, face = "bold", fill = "gray"),
+        panel.spacing.x = unit(2, "lines"),
+        plot.margin = margin(10, 25, 10, 10),
+        panel.grid = element_blank(),
+        panel.spacing.y = unit(01, "line")) +
   labs(title = "Command of the Commons",
        subtitle = "Gap Between US and China Share of Capabilities",
-       y = "US-China Balance of Capabilities")
+       y = "US vs China Share of Great Powers' Capabilities")
 ```
 
 # Conclusion
@@ -1222,3 +1242,29 @@ To date, explanations of the causes or effects of variation in the composition o
 \newpage
 
 # References
+
+[^1]: Of course, these two are not synonymous. Military capabilities are only one component of military spending and the cost of labor is a large component of military spending [@whitten_butterygunswelfare_2011].
+
+[^2]: See the section "Defining military capabilities" in the codebook for a more detailed definition of military capabilities.
+
+[^3]: I use percent of years since not all countries exist across the entire duration of the data. 100% of Slovenia is covered, for example, because data exists for all 22 years since since it established independence in 1991.
+
+[^4]: Quotes come from [IISS Testimonials](https://www.iiss.org/publications/the-military-balance)
+
+[^5]: While these 5 classifications levels are produced by IISS, their labels are the author's.
+
+[^6]: Standardizing string variables across unit names is a challenging endeavor that will be advanced in future iterations of the data. For more information about using the unit-level information in *rDMC raw*, see the appendix.
+
+[^7]: For example, entries exist for the "AIM-9", "AIM-9 Sidewinder", "Aim-9", and "Aim-9 Sidewinder", which all refer to the same capability but with differences in capitalization and punctuation. rDMC 2.0 will standardize the unit-level names, but the time-intensive nature of that effort means it will not be completed for some time.
+
+[^8]: Since the data starts in 1970, tanks first deployed in 1970 most likely represent models developed before then. A more thorough analysis would track down the actual deployment date for each tank model, rather than relying on their deployment date as done here. Importantly, the data does distinguish between different platform upgrades, differentiating an F-16A from an F-16B in most cases.
+
+[^9]: *rDMC long* and *rDMC wide* are identical in terms of scope and values and differ only in the unit of analysis. In *rDMC long* the unit of analysis is the country-year-technology while in *rDMC wide* the unit of analysis is the country-year. They are both provided to simplify the process of merging with existing datasets much like the Alliance Treaty Obligations and Provisions (ATOP) provides alliance data at various units of analysis [@leeds_alliancetreatyobligations_2002].
+
+[^10]: There are cases where an equipment's category changes in ways the data maintains. For example, many aircraft and helicopters are phased out by being shifted to non-combat roles like training before they are fully retired. A country may thus experience a decrease in combat aircraft and an increase in training aircraft from one year to the next without the actual aircraft they possess changing.
+
+[^11]: New data on combat aircraft has recently been produced by @saunders_commandskiesairpower_2020.
+
+[^12]: I exclude states with a population below 750,000 as done by @eyre_statusnormsproliferation_1996 and @sechser_armyyouhave_2010. Other states are missing data because they were not yet sovereign states (South Sudan) or because data on military capabilities was not collected for states just after or still in a serious civil conflict (Congo).
+
+[^13]: This clustering method has been used for community detection of economic industries [@delgado_definingclustersrelated_2016], democratization patterns [@gleditsch_diffusioninternationalcontext_2006], and arms sales [@akerman_globalarmstrade_2014].
