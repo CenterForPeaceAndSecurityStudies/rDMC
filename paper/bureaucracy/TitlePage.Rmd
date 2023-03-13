@@ -1,0 +1,70 @@
+---
+title: '\singlespacing Planes, Trains, and Armored Mobiles: Introducing a Dataset of the Global Distribution of Military Capabilities (rDMC)'
+author: | 
+  |  J Andr$\'{e}$s Gannon^[Email: \texttt{jgannon@cfr.org}. Web: \texttt{jandresgannon.com}. \newline See \texttt{https://www.militarycapabilities.com/} for a website of the complete project. Data and code for the empirical analysis can be found at \texttt{https://github.com/CenterForPeaceAndSecurityStudies/rDMC}. This project was funded and produced under the UC San Diego Center for Peace and Security Studies (cPASS).]
+  | Stanton Nuclear Security Fellow, Council on Foreign Relations
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  bookdown::pdf_document2:
+    number_sections: yes
+    toc: no
+    keep_tex: yes
+  bookdown::html_notebook2:
+    fig_height: 8
+    fig_width: 12
+    number_sections: yes
+    theme: flatly
+    toc: yes
+    toc_depth: 5
+    toc_float:
+      collapsed: yes
+  bookdown::word_document2: default
+  bookdown::word_document:
+    toc: no
+site: bookdown::bookdown_site
+editor_options:
+  chunk_output_type: inline
+abstract: \singlespacing \noindent This article introduces a new dataset on the disaggregated military capabilities states possess from 1970 -- 2014. While practitioners have long recognized the importance of what weapons states own, scholars have largely examined surrounding questions in piecemeal fashion due to data limitations. The Distribution of Military Capabilities (rDMC) dataset identifies the weapons portfolios of states over the past half century at various levels of aggregation suitable to a wide variety of research questions. This paper begins by explaining the value of collecting data on disaggregated national military capabilities, the data's scope, and the data collection process. I then identify some initial trends about changes in the distribution of military capabilities across states from 1970 -- 2014. I conclude by identifying future research use of the data as both a dependent and independent variable. These data allows scholars to better investigate both international questions concerning power projection, military innovation, and conflict outcomes as well as domestic questions like coup risks, use of force decisions, and interest group lobbying.
+header-includes:
+- \usepackage{tikz}
+- \usepackage{pgfplots}
+- \pgfplotsset{compat=newest}
+- \usetikzlibrary{plotmarks}
+- \usetikzlibrary{arrows.meta}
+- \usepgfplotslibrary{patchplots}
+- \usepackage{grffile}
+- \usepackage{caption}
+- \usepackage[utf8]{inputenc}
+- \usepackage[doublespacing]{setspace}
+- \usepackage{float}
+- \usepackage{multirow}
+- \renewcommand{\topfraction}{.85}
+- \renewcommand{\bottomfraction}{.7}
+- \renewcommand{\textfraction}{.15}
+- \renewcommand{\floatpagefraction}{.66}
+- \setcounter{topnumber}{3}
+- \setcounter{bottomnumber}{3}
+- \setcounter{totalnumber}{4}
+---
+
+```{r knitr_options, echo = FALSE, warning = FALSE, message = FALSE}
+# added to indicate that the home holder is the repo folder
+library(knitr)
+library(magrittr)
+library(ggplot2)
+knitr::opts_knit$set(root.dir = normalizePath(here::here()))
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = FALSE, 
+                      error = FALSE, 
+                      message = FALSE, 
+                      fig.path = "figures/")
+```
+
+```{r load data}
+rdmc_raw <- readRDS(file = paste0(here::here(), "/data/rDMC_raw_v1.rds"))
+rdmc_long <- readRDS(file = paste0(here::here(), "/data/rDMC_long_v1.rds"))
+rdmc_wide <- readRDS(file = paste0(here::here(), "/data/rDMC_wide_v1.rds"))
+```
+
+Word count: 7,049
+

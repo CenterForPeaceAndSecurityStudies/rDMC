@@ -6,6 +6,10 @@ author: |
   |  J Andr$\'{e}$s Gannon^[Email: \texttt{jagannon@hks.harvard.edu}. Web: \texttt{jandresgannon.com}. \newline See \texttt{https://www.militarycapabilities.com/} for a website of the complete project. Data and code for the empirical analysis can be found at \texttt{https://github.com/CenterForPeaceAndSecurityStudies/rDMC}. This projected was funded and produced by the UC San Diego Center for Peace and Security Studies.]
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
+  bookdown::pdf_document2:
+    number_sections: yes
+    toc: no
+    keep_tex: yes
   bookdown::html_notebook2:
     fig_height: 8
     fig_width: 12
@@ -15,10 +19,6 @@ output:
     toc_depth: 5
     toc_float:
       collapsed: yes
-  bookdown::pdf_document2:
-    number_sections: yes
-    toc: no
-    keep_tex: yes
   bookdown::word_document2: default
   bookdown::word_document:
     toc: no
@@ -371,9 +371,6 @@ knitr::include_graphics(path = paste0(here::here(), "/paper/dendrogram_subjectiv
 ```
 
 There are, of course, many ways to categorize technologies. Some categories could be grouped together depending on the research interest. "Aircraft -- transport" and "helicopters -- transport" could be considered somewhat interchangeable to those interested in a state's ability to move personnel and material via the air. Alternatively, "helicopters -- transport" could be grouped with "helicopters -- search and rescue" if studying a topic like arms sales or military base location given similarity in their physical make-up. Some categories could also be further *dis*aggregated. The category "aircraft -- maritime patrol", for example, include anti-submarine warfare, anti-surface warfare, and maritime reconnaissance which all "patrol" different areas of the sea. Aside from these deductive ways of aggregating or disaggregating the military technologies, inductive methods could identify different sets of similar technologies based on things like rarity, pairwise occurrence, or component parts [@douglass_churningbutterguns_2019]. Rather than try to create and justify a single definitive ontology of military technologies, the data are constructed so that all aggregations are transparent and, more importantly, modular. By simply selecting new aggregation categories, scholars can produce their own counts with different categories. Scholars who wish to differentiate between those categories can transparently see how those were aggregated, change those aggregations (including creating new technology categories or deleting existing ones), and produce a new dataset consistent with the classifications that suite their research questions.
-
-# Application
-
 
 # Conclusion
 Heterogeneity in how states arm themselves exists and is significant both in terms of substance and consequence. Identifying the dimensions of this heterogeneity is a necessary precondition for explaining both its causes and consequences in international affairs. To date, explanations of the causes or effects of variation in the composition of a state's military assets has been empirically limited because that data has not existed in a way conducive to systemic analysis. This is not just true for quantitative scholars interested in large cross-national regressions; scholars studying individual countries, regions, or specific time periods have been limited in their ability to provide even descriptive accounts about the balance of military power using any observations more detailed than national military spending, military personnel counts, or outcomes of interests like actualized conflicts. The hope is that the broader scholarly community can use the data created here to answers other questions of interest. While much ink has been spilled debating \textit{whether} military technology matters [@tuchman_gunsaugust_1962; @rosen_winningnextwar_1991; @betts_shouldstrategicstudies_1997], the discussion should productively shift to \textit{what} military technologies matter and \textit{how}. In transparently presenting the process by which this data was created, that should be easier.
