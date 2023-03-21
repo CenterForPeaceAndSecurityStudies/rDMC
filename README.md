@@ -1,6 +1,6 @@
-# rDMC
+# DoDL
 
-The rDMC github repository contains all the data and code necessary to produce the Distribution of Military Capabilities (rDMC) dataset. The repository, data, and article are produced by J Andres Gannon.
+The DoDL github repository contains all the data and code necessary to produce the DoDL Paper. The repository, data, and article are produced by J Andres Gannon.
 
 ## Installation
 
