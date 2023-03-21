@@ -1,0 +1,723 @@
+---
+title: "04 Dependent Variable - Specialization"
+author: "J Andres Gannon"
+date: "November 21, 2019"
+output:
+  html_document:
+    toc: yes
+  html_notebook:
+    toc: yes
+    toc_float: yes
+editor_options:
+  chunk_output_type: inline
+---
+<style>
+    body .main-container {
+        max-width: 100%;
+    }
+</style>
+
+# Prep
+Pipe operators have trouble loading in-line so we load those first.
+```{r}
+library(magrittr)
+library(ggplot2)
+library(dplyr)
+library(igraph)
+library(ggraph)
+library(visNetwork)
+
+```
+
+# Load and clean data
+## Load
+We start by loading the cleaned IISS data. This dataframe contains information about the count of military units at the country-year level.
+```{r}
+# Load data
+df <- readRDS(file = paste0(here::here(), '/data/01z_rDMC_wide.rds')) %>%
+  dplyr::select(-stateabb, -ccode)
+  
+# Keep a separate df of just the ID vars since ccode and cname were added later and are not included in the function
+id_vars <- df %>%
+  dplyr::select(year, country)
+
+# Create vector of countries and years
+df_year <- unique(df$year)
+df_country <- unique(df$country)
+
+# Create a 2014 matrix just to use to test the code
+df_test <- df %>%
+  dplyr::filter(year == 2014) %>%
+  tidyr::unite(col = "rowname", country, year, remove = TRUE) %>%
+  tibble::column_to_rownames(var = "rowname") %>%
+  replace(is.na(.), 0) %>%
+  dplyr::filter_all(dplyr::any_vars(. != 0))
+```
+
+## Clean
+
+# Dyadic division of labor
+## Measures
+### RInSP
+```{r}
+# initial empty list
+my_list <- list()
+
+# define function
+func <- function(df_year){
+  
+  scores <- df %>% 
+    dplyr::filter(year == df_year) %>%
+    tidyr::unite(col = "rowname", country, year, remove = TRUE) %>%
+    tibble::column_to_rownames(var = "rowname") %>%
+    replace(is.na(.), 0) %>%
+    dplyr::filter_all(dplyr::any_vars(. != 0))
+
+  # Create the object used for all the functions
+  import <- RInSp::import.RInSp(scores)
+
+  # Calculates pairwise diet overlap between all individuals in the sample
+  similarity <- RInSp::overlap(import)
+  
+  result <- as.data.frame(similarity$overlapmatrix)
+
+  # Set the upper diagonal values to NA to make it easier to deal with directed dyad conversion
+#  result[upper.tri(result)] <- NA
+
+  # Convert to dyadic long data
+  scores <- result %>%
+  tibble::rownames_to_column(var = "statea") %>%
+  dplyr::group_by(statea) %>%
+  tidyr::gather(key = "stateb",
+                value = "similarity",
+                -statea) %>%
+  dplyr::filter(statea != stateb) %>%
+  tidyr::separate(statea, into = c("statea", "year"), sep = "_") %>%
+  dplyr::mutate(year = as.numeric(year)) %>%
+  dplyr::mutate(stateb = stringr::str_remove(stateb, "\\_.*")) %>%
+  dplyr::filter(!is.na(similarity)) %>%
+  dplyr::select(year, statea, stateb, similarity) %>%
+  dplyr::mutate(similarity = round(similarity, 3)) %>%
+  dplyr::rename(dist_rinsp = similarity)
+
+  # save each year as a dataframe in a list
+  my_list[paste("scores", df_year)] <<- list(scores) 
+}
+
+# loop through all years
+for(i in df_year){
+  func(df_year = i)
+}
+
+# bind nested datasets into a complete dataframe
+d_by_year <- do.call(rbind.data.frame, my_list)
+
+# Rename as the method used
+dyad_rinsp <- as.data.frame(d_by_year)
+```
+
+For later, compare to the baseline average level of overlap in each year
+```{r, eval = FALSE}
+# E identifies the average pairwise overlap between states, so we can use that as a baseline to see if two states have more or less overlap than expected
+olap_baseline <- RInSp::Emc(import,
+                   popd.type = "average")
+olap_baseline$Eadj
+```
+
+### vegan
+Veg dist finds the similarity between all pairs of countries. I should use morisita or gower. For morisita, 0 means they're identical and 1 means they're total opposites
+```{r}
+# initial empty list
+my_list <- list()
+
+# define function
+func <- function(df_year){
+  
+  scores <- df %>% 
+    dplyr::filter(year == df_year) %>%
+    tidyr::unite(col = "rowname", country, year, remove = TRUE) %>%
+    tibble::column_to_rownames(var = "rowname") %>%
+    replace(is.na(.), 0) %>%
+    dplyr::filter_all(dplyr::any_vars(. != 0))
+
+  vegan <- scores %>%
+    vegan::vegdist(method = "morisita",
+                 upper = TRUE)
+
+  # Convert to dyadic long data
+  scores <- broom::tidy(vegan) %>%
+    tidyr::separate(item1, into = c("stateb", "year"), sep = "_") %>%
+    dplyr::mutate(item2 = stringr::str_remove(item2, "\\_.*")) %>%
+    dplyr::filter(!is.na(distance)) %>%
+    dplyr::rename(statea = item2) %>%
+    dplyr::select(year, statea, stateb, distance) %>%
+    dplyr::mutate(year = as.numeric(year)) %>%
+    dplyr::mutate(distance = round(distance, 3)) %>%
+    dplyr::rename(dist_vegan = distance)
+
+  # save each year as a dataframe in a list
+  my_list[paste("scores", df_year)] <<- list(scores) 
+}
+
+# loop through all years
+for(i in df_year){
+  func(df_year = i)
+}
+
+# bind nested datasets into a complete dataframe
+d_by_year <- do.call(rbind.data.frame, my_list)
+
+# Rename as the method used
+dyad_vegan <- as.data.frame(d_by_year)
+```
+
+### adiv
+```{r}
+# initial empty list
+my_list <- list()
+
+# define function
+func <- function(df_year){
+  
+  scores <- df %>% 
+    dplyr::filter(year == df_year) %>%
+    tidyr::unite(col = "rowname", country, year, remove = TRUE) %>%
+    tibble::column_to_rownames(var = "rowname") %>%
+    replace(is.na(.), 0) %>%
+    dplyr::filter_all(dplyr::any_vars(. != 0))
+  
+  adiv <- scores %>%
+    adiv::distMS(upper = TRUE)
+
+  # Convert to dyadic long data
+  scores <- broom::tidy(adiv) %>%
+  tidyr::separate(item1, into = c("stateb", "year"), sep = "_") %>%
+  dplyr::mutate(item2 = stringr::str_remove(item2, "\\_.*")) %>%
+  dplyr::filter(!is.na(distance)) %>%
+  dplyr::rename(statea = item2) %>%
+  dplyr::select(year, statea, stateb, distance) %>%
+  dplyr::mutate(year = as.numeric(year)) %>%
+  dplyr::mutate(distance = round(distance, 3)) %>%
+  dplyr::rename(dist_adiv = distance)
+
+  # save each year as a dataframe in a list
+  my_list[paste("scores", df_year)] <<- list(scores) 
+}
+
+# loop through all years
+for(i in df_year){
+  func(df_year = i)
+}
+
+# bind nested datasets into a complete dataframe
+d_by_year <- do.call(rbind.data.frame, my_list)
+
+# Rename as the method used
+dyad_adiv <- as.data.frame(d_by_year)
+```
+
+# Prepare
+## Merge
+```{r}
+scores_df <- dplyr::left_join(dyad_rinsp, dyad_vegan) %>%
+  dplyr::left_join(., dyad_adiv)
+
+# Flip the scale on rinsp so all 3 can be interpreted the same way with 0 means identical mils and 1 meaning division of labor
+scores_df <- scores_df %>%
+  dplyr::mutate(dist_rinsp = 1 - dist_rinsp)
+```
+
+## Clean
+```{r}
+df <- scores_df
+
+# Put cow country codes and numbers into this
+df$statea_abb <- countrycode::countrycode(df$statea, "country.name", "cowc")
+df$statea_ccode <- countrycode::countrycode(df$statea, "country.name", "cown")
+
+df$stateb_abb <- countrycode::countrycode(df$stateb, "country.name", "cowc")
+df$stateb_ccode <- countrycode::countrycode(df$stateb, "country.name", "cown")
+
+# Manually fix the cow code matches that countrycode doesn't get right based on date
+## German Federal Republic
+df$statea_abb[df$statea == "german federal republic" & df$year < 1991] <- "GFR"
+df$statea_ccode[df$statea == "german federal republic" & df$year < 1991] <- 260
+
+df$stateb_abb[df$stateb == "german federal republic" & df$year < 1991] <- "GFR"
+df$stateb_ccode[df$stateb == "german federal republic" & df$year < 1991] <- 260
+
+## Yemen
+df$statea_abb[df$statea == "yemen" & df$year < 1991] <- "YAR"
+df$statea_ccode[df$statea == "yemen" & df$year < 1991] <- 678
+
+df$stateb_abb[df$stateb == "yemen" & df$year < 1991] <- "YAR"
+df$stateb_ccode[df$stateb == "yemen" & df$year < 1991] <- 678
+
+## Serbia
+df$statea_abb[df$statea == "serbia" & df$year >= 2006] <- "YUG"
+df$statea_ccode[df$statea == "serbia" & df$year >= 2006] <- 345
+
+df$stateb_abb[df$stateb == "serbia" & df$year >= 2006] <- "YUG"
+df$stateb_ccode[df$stateb == "serbia" & df$year >= 2006] <- 345
+
+# Reorder vars
+scores_df <- df %>%
+  dplyr::rename(ccode1 = statea_ccode,
+                 ccode2 = stateb_ccode) %>%
+  dplyr::filter(ccode1 < ccode2) %>%
+  dplyr::select(year, 
+                 statea, statea_abb, ccode1,
+                 stateb, stateb_abb, ccode2,
+                 dist_rinsp, dist_vegan, dist_adiv)
+```
+
+## Normalize
+```{r}
+# Create object that finds the best normalization model
+bn_rinsp <- bestNormalize::bestNormalize(scores_df$dist_rinsp)
+bn_vegan <- bestNormalize::bestNormalize(scores_df$dist_vegan)
+bn_adiv <- bestNormalize::bestNormalize(scores_df$dist_adiv)
+
+# Add normalized spec scores to df
+scores_df$dist_rinsp_norm <- predict(bn_rinsp, scores_df$dist_rinsp)
+scores_df$dist_vegan_norm <- predict(bn_vegan, scores_df$dist_vegan)
+scores_df$dist_adiv_norm <- predict(bn_adiv, scores_df$dist_adiv)
+```
+
+# Compare
+## Correlations
+```{r}
+# Correlation plots
+scores_df %>%
+  dplyr::select(dplyr::starts_with("dist_")) %>%
+  GGally::ggpairs()
+```
+
+## Distributions and scores
+```{r}
+# Density plots comparing the 3 measures
+scores_df %>%
+  dplyr::select(dplyr::starts_with("dist_")) %>%
+  tidyr::gather(key = "measure",
+                value = "score") %>%
+  ggplot(aes(x = score,
+             group = measure,
+             color = measure)) + 
+  geom_density() + 
+  theme_minimal()
+
+# Box plots comparing the average and distribution of each measure 
+scores_df %>%
+  dplyr::select(dplyr::starts_with("dist_")) %>%
+  tidyr::gather(key = "measure",
+                value = "score") %>%
+  ggplot(aes(y = score,
+             group = measure,
+             color = measure)) + 
+  geom_boxplot() + 
+  theme_minimal()
+```
+
+# Visualize
+## Over time
+
+Beckley 2017 looks at the military capabilities of China's rivals (those with ongoing territorial disputes).
+Some of those states have defense relationships with the US (Japan, South Korea, Taiwan, Philippines)
+Others do not (Brunei, Indonesia, Malaysia, Vietnam)
+
+```{r}
+scores_df <- readRDS(file = paste0(here::here(), '/data/02b_DV_dol-dyad.rds'))
+
+# Histogram
+g <- scores_df %>%
+  ggplot(aes(x = dist_rinsp)) + 
+  geom_histogram(color = "black",
+                 fill = "grey") + 
+  geom_vline(aes(xintercept = median(dist_rinsp)),
+             color = "blue",
+             linetype = "dashed",
+             size = 1) +
+  theme_bw() +
+  labs(title = "",
+       caption = "Dashed line represents median value.",
+       x = "Division of Labor \n (Low --- High)",
+       y = "Number of Dyad-Years") +
+  theme(text = element_text(size = 28))
+
+g
+
+ggsave(g, file = paste0(here::here(),"/paper/figures/dol_scores/dol_histogram.png"), width = 16, height = 12, units = "in")
+
+# Show some alliances
+scores_df %>%
+  tidyr::unite(col = "dyad", statea_abb, stateb_abb, sep = "-", remove = FALSE) %>%
+  dplyr::filter(statea_abb == "USA" &
+                  stateb_abb %in% c('JPN',
+                                    'ROK',
+                                    'TAW',
+                                    'PHI',
+                                    'BRU',
+                                    'INS',
+                                    'MAL',
+                                    'DRV')) %>%
+  dplyr::mutate(usally = dplyr::if_else(stateb_abb %in% c('JPN',
+                                                          'ROK',
+                                                          'TAW',
+                                                          'PHI'),
+                                        1, 0),
+                usally = as.factor(usally)) %>%
+  ggplot(aes(x = year,
+             y = dist_rinsp,
+             group = usally,
+             color = usally)) +
+  geom_point(position = "jitter") +
+  geom_smooth(method = "gam") +
+  theme_minimal() +
+  labs(title = "Division of Labor of Military Capabilities",
+       x = "Year",
+       y = "Division of Labor")
+```
+
+## Dyad network
+Figure out a nice way to show dyadic division of labor scores using a network plot. Ways to simplify it include:
+- a single year (2010)
+- a smaller set of countries (maybe a continent, subcontinent, etc). If so, choose not Europe since we have a lot of Europe right now
+- cut off for division of labor score (dist_rinsp) below which we code it as a 0. 0 means identical and 1 means opposite/complementary. The adjusted eindex in the RinSp package can give you the RinSp score that the average pair of states have. That could be a reasonable cut off. I can calculate this for you if you think that would be helpful. Probably a lot easier than you doing it yourself. That may basically be the same as the normalized rinsp > 0 though, which is a lot easier and is what I've done in the chunk below.
+
+Some network plot resources:
+- intro https://kateto.net/network-visualization, https://github.com/ColinFay/conf/blob/master/2017-11-budapest/fay_colin_visualise_network.pdf
+- using ggnetwork https://www.r-bloggers.com/2016/03/ggnetwork-network-geometries-for-ggplot2/
+- using ggraph https://www.r-bloggers.com/2017/02/announcing-ggraph-a-grammar-of-graphics-for-relational-data/
+- using tidyverse https://www.r-bloggers.com/2019/03/graph-analysis-using-the-tidyverse/
+
+```{r}
+dyad_network <- readRDS(paste0(here::here(), "/data/","df_fulldata_dyad.rds"))
+
+# Make network
+NATO_network_plot <-  dyad_network %>% 
+  dplyr::filter(year == 2010) %>%
+  dplyr::filter(dist_rinsp_norm > 0.53) %>%
+  dplyr::select(statea_abb, stateb_abb,
+                dist_rinsp, dyad) %>%
+   dplyr::filter(dyad == "ALB_BEL" | dyad == "BEL_ALB" | dyad == "ALB_BUL" | dyad == "BUL_ALB"
+                 | dyad == "ALB_CAN" | dyad == "CAN_ALB" | dyad == "ALB_CRO" | dyad == "CRO_ALB" 
+                 | dyad == "ALB_CZR" | dyad == "CZR_ALB" | dyad == "ALB_DEN" | dyad == "DEN_ALB" 
+                | dyad == "ALB_EST" | dyad == "EST_ALB" | dyad == "ALB_FRN" | dyad == "FRN_ALB" 
+                | dyad == "ALB_GMY" | dyad == "GMY_ALB" | dyad == "ALB_GRC" | dyad == "GRC_ALB"
+                | dyad == "ALB_HUN" | dyad == "HUN_ALB" | dyad == "ALB_ICE" | dyad == "ICE_ALB"
+                | dyad == "ALB_ITA" | dyad == "ITA_ALB" | dyad == "ALB_LAT" | dyad == "LAT_ALB"
+                | dyad == "ALB_LIT" | dyad == "LIT_ALB" | dyad == "ALB_LUX" | dyad == "LUX_ALB"
+                | dyad == "ALB_MNG" | dyad == "MNG_ALB" | dyad == "ALB_NTH" | dyad == "NTH_ALB"
+                | dyad == "ALB_MAC" | dyad == "MAC_ALB" | dyad == "ALB_NOR" | dyad == "NOR_ALB"
+                | dyad == "ALB_POL" | dyad == "POL_ALB" | dyad == "ALB_POR" | dyad == "POR_ALB"
+                | dyad == "ALB_ROM" | dyad == "ROM_ALB" | dyad == "ALB_SLO" | dyad == "SLO_ALB"
+                | dyad == "ALB_SLV" | dyad == "SLV_ALB" | dyad == "ALB_SPN" | dyad == "SPN_ALB"
+                | dyad == "ALB_TUR" | dyad == "TUR_ALB" | dyad == "ALB_UKG" | dyad == "UKG_ALB"
+                | dyad == "ALB_USA" | dyad == "USA_ALB"  | dyad == "BEL_BUL" | dyad == "BUL_BEL"
+                 | dyad == "BEL_CAN" | dyad == "CAN_BEL" | dyad == "BEL_CRO" | dyad == "CRO_BEL" 
+                 | dyad == "BEL_CZR" | dyad == "CZR_BEL" | dyad == "BEL_DEN" | dyad == "DEN_BEL" 
+                | dyad == "BEL_EST" | dyad == "EST_BEL" | dyad == "BEL_FRN" | dyad == "FRN_BEL" 
+                | dyad == "BEL_GMY" | dyad == "GMY_BEL" | dyad == "BEL_GRC" | dyad == "GRC_BEL"
+                | dyad == "BEL_HUN" | dyad == "HUN_BEL" | dyad == "BEL_ICE" | dyad == "ICE_BEL"
+                | dyad == "BEL_ITA" | dyad == "ITA_BEL" | dyad == "BEL_LAT" | dyad == "LAT_BEL"
+                | dyad == "BEL_LIT" | dyad == "LIT_BEL" | dyad == "BEL_LUX" | dyad == "LUX_BEL"
+                | dyad == "BEL_MNG" | dyad == "MNG_BEL" | dyad == "BEL_NTH" | dyad == "NTH_BEL"
+                | dyad == "BEL_MAC" | dyad == "MAC_BEL" | dyad == "BEL_NOR" | dyad == "NOR_BEL"
+                | dyad == "BEL_POL" | dyad == "POL_BEL" | dyad == "BEL_POR" | dyad == "POR_BEL"
+                | dyad == "BEL_ROM" | dyad == "ROM_BEL" | dyad == "BEL_SLO" | dyad == "SLO_BEL"
+                | dyad == "BEL_SLV" | dyad == "SLV_BEL" | dyad == "BEL_SPN" | dyad == "SPN_BEL"
+                | dyad == "BEL_TUR" | dyad == "TUR_BEL" | dyad == "BEL_UKG" | dyad == "UKG_BEL"
+                | dyad == "BEL_USA" | dyad == "USA_BEL"    | dyad == "BUL_CAN" | dyad == "CAN_BUL" 
+                | dyad == "BUL_CRO" | dyad == "CRO_BUL" 
+                 | dyad == "BUL_CZR" | dyad == "CZR_BUL" | dyad == "BUL_DEN" | dyad == "DEN_BUL" 
+                | dyad == "BUL_EST" | dyad == "EST_BUL" | dyad == "BUL_FRN" | dyad == "FRN_BUL" 
+                | dyad == "BUL_GMY" | dyad == "GMY_BUL" | dyad == "BUL_GRC" | dyad == "GRC_BUL"
+                | dyad == "BUL_HUN" | dyad == "HUN_BUL" | dyad == "BUL_ICE" | dyad == "ICE_BUL"
+                | dyad == "BUL_ITA" | dyad == "ITA_BUL" | dyad == "BUL_LAT" | dyad == "LAT_BUL"
+                | dyad == "BUL_LIT" | dyad == "LIT_BUL" | dyad == "BUL_LUX" | dyad == "LUX_BUL"
+                | dyad == "BUL_MNG" | dyad == "MNG_BUL" | dyad == "BUL_NTH" | dyad == "NTH_BUL"
+                | dyad == "BUL_MAC" | dyad == "MAC_BUL" | dyad == "BUL_NOR" | dyad == "NOR_BUL"
+                | dyad == "BUL_POL" | dyad == "POL_BUL" | dyad == "BUL_POR" | dyad == "POR_BUL"
+                | dyad == "BUL_ROM" | dyad == "ROM_BUL" | dyad == "BUL_SLO" | dyad == "SLO_BUL"
+                | dyad == "BUL_SLV" | dyad == "SLV_BUL" | dyad == "BUL_SPN" | dyad == "SPN_BUL"
+                | dyad == "BUL_TUR" | dyad == "TUR_BUL" | dyad == "BUL_UKG" | dyad == "UKG_BUL"
+                | dyad == "BUL_USA" | dyad == "USA_BUL" | dyad == "CAN_CRO" | dyad == "CRO_CAN" 
+                 | dyad == "CAN_CZR" | dyad == "CZR_CAN" | dyad == "CAN_DEN" | dyad == "DEN_CAN" 
+                | dyad == "CAN_EST" | dyad == "EST_CAN" | dyad == "CAN_FRN" | dyad == "FRN_CAN" 
+                | dyad == "CAN_GMY" | dyad == "GMY_CAN" | dyad == "CAN_GRC" | dyad == "GRC_CAN"
+                | dyad == "CAN_HUN" | dyad == "HUN_CAN" | dyad == "CAN_ICE" | dyad == "ICE_CAN"
+                | dyad == "CAN_ITA" | dyad == "ITA_CAN" | dyad == "CAN_LAT" | dyad == "LAT_CAN"
+                | dyad == "CAN_LIT" | dyad == "LIT_CAN" | dyad == "CAN_LUX" | dyad == "LUX_CAN"
+                | dyad == "CAN_MNG" | dyad == "MNG_CAN" | dyad == "CAN_NTH" | dyad == "NTH_CAN"
+                | dyad == "CAN_MAC" | dyad == "MAC_CAN" | dyad == "CAN_NOR" | dyad == "NOR_CAN"
+                | dyad == "CAN_POL" | dyad == "POL_CAN" | dyad == "CAN_POR" | dyad == "POR_CAN"
+                | dyad == "CAN_ROM" | dyad == "ROM_CAN" | dyad == "CAN_SLO" | dyad == "SLO_CAN"
+                | dyad == "CAN_SLV" | dyad == "SLV_CAN" | dyad == "CAN_SPN" | dyad == "SPN_CAN"
+                | dyad == "CAN_TUR" | dyad == "TUR_CAN" | dyad == "CAN_UKG" | dyad == "UKG_CAN"
+                | dyad == "CAN_USA" | dyad == "USA_CAN"  | dyad == "CRO_CZR" | dyad == "CZR_CRO"
+                | dyad == "CRO_DEN" | dyad == "DEN_CRO" 
+                | dyad == "CRO_EST" | dyad == "EST_CRO" | dyad == "CRO_FRN" | dyad == "FRN_CRO" 
+                | dyad == "CRO_GMY" | dyad == "GMY_CRO" | dyad == "CRO_GRC" | dyad == "GRC_CRO"
+                | dyad == "CRO_HUN" | dyad == "HUN_CRO" | dyad == "CRO_ICE" | dyad == "ICE_CRO"
+                | dyad == "CRO_ITA" | dyad == "ITA_CRO" | dyad == "CRO_LAT" | dyad == "LAT_CRO"
+                | dyad == "CRO_LIT" | dyad == "LIT_CRO" | dyad == "CRO_LUX" | dyad == "LUX_CRO"
+                | dyad == "CRO_MNG" | dyad == "MNG_CRO" | dyad == "CRO_NTH" | dyad == "NTH_CRO"
+                | dyad == "CRO_MAC" | dyad == "MAC_CRO" | dyad == "CRO_NOR" | dyad == "NOR_CRO"
+                | dyad == "CRO_POL" | dyad == "POL_CRO" | dyad == "CRO_POR" | dyad == "POR_CRO"
+                | dyad == "CRO_ROM" | dyad == "ROM_CRO" | dyad == "CRO_SLO" | dyad == "SLO_CRO"
+                | dyad == "CRO_SLV" | dyad == "SLV_CRO" | dyad == "CRO_SPN" | dyad == "SPN_CRO"
+                | dyad == "CRO_TUR" | dyad == "TUR_CRO" | dyad == "CRO_UKG" | dyad == "UKG_CRO"
+                | dyad == "CRO_USA" | dyad == "USA_CRO"  | dyad == "CZR_DEN" | dyad == "DEN_CZR" 
+                | dyad == "CZR_EST" | dyad == "EST_CZR" | dyad == "CZR_FRN" | dyad == "FRN_CZR" 
+                | dyad == "CZR_GMY" | dyad == "GMY_CZR" | dyad == "CZR_GRC" | dyad == "GRC_CZR"
+                | dyad == "CZR_HUN" | dyad == "HUN_CZR" | dyad == "CZR_ICE" | dyad == "ICE_CZR"
+                | dyad == "CZR_ITA" | dyad == "ITA_CZR" | dyad == "CZR_LAT" | dyad == "LAT_CZR"
+                | dyad == "CZR_LIT" | dyad == "LIT_CZR" | dyad == "CZR_LUX" | dyad == "LUX_CZR"
+                | dyad == "CZR_MNG" | dyad == "MNG_CZR" | dyad == "CZR_NTH" | dyad == "NTH_CZR"
+                | dyad == "CZR_MAC" | dyad == "MAC_CZR" | dyad == "CZR_NOR" | dyad == "NOR_CZR"
+                | dyad == "CZR_POL" | dyad == "POL_CZR" | dyad == "CZR_POR" | dyad == "POR_CZR"
+                | dyad == "CZR_ROM" | dyad == "ROM_CZR" | dyad == "CZR_SLO" | dyad == "SLO_CZR"
+                | dyad == "CZR_SLV" | dyad == "SLV_CZR" | dyad == "CZR_SPN" | dyad == "SPN_CZR"
+                | dyad == "CZR_TUR" | dyad == "TUR_CZR" | dyad == "CZR_UKG" | dyad == "UKG_CZR"
+                | dyad == "CZR_USA" | dyad == "USA_CZR"  | dyad == "DEN_EST" | dyad == "EST_DEN" 
+                | dyad == "DEN_FRN" | dyad == "FRN_DEN" 
+                | dyad == "DEN_GMY" | dyad == "GMY_DEN" | dyad == "DEN_GRC" | dyad == "GRC_DEN"
+                | dyad == "DEN_HUN" | dyad == "HUN_DEN" | dyad == "DEN_ICE" | dyad == "ICE_DEN"
+                | dyad == "DEN_ITA" | dyad == "ITA_DEN" | dyad == "DEN_LAT" | dyad == "LAT_DEN"
+                | dyad == "DEN_LIT" | dyad == "LIT_DEN" | dyad == "DEN_LUX" | dyad == "LUX_DEN"
+                | dyad == "DEN_MNG" | dyad == "MNG_DEN" | dyad == "DEN_NTH" | dyad == "NTH_DEN"
+                | dyad == "DEN_MAC" | dyad == "MAC_DEN" | dyad == "DEN_NOR" | dyad == "NOR_DEN"
+                | dyad == "DEN_POL" | dyad == "POL_DEN" | dyad == "DEN_POR" | dyad == "POR_DEN"
+                | dyad == "DEN_ROM" | dyad == "ROM_DEN" | dyad == "DEN_SLO" | dyad == "SLO_DEN"
+                | dyad == "DEN_SLV" | dyad == "SLV_DEN" | dyad == "DEN_SPN" | dyad == "SPN_DEN"
+                | dyad == "DEN_TUR" | dyad == "TUR_DEN" | dyad == "DEN_UKG" | dyad == "UKG_DEN"
+                | dyad == "DEN_USA" | dyad == "USA_DEN"  | dyad == "EST_FRN" | dyad == "FRN_EST" 
+                | dyad == "EST_GMY" | dyad == "GMY_EST" | dyad == "EST_GRC" | dyad == "GRC_EST"
+                | dyad == "EST_HUN" | dyad == "HUN_EST" | dyad == "EST_ICE" | dyad == "ICE_EST"
+                | dyad == "EST_ITA" | dyad == "ITA_EST" | dyad == "EST_LAT" | dyad == "LAT_EST"
+                | dyad == "EST_LIT" | dyad == "LIT_EST" | dyad == "EST_LUX" | dyad == "LUX_EST"
+                | dyad == "EST_MNG" | dyad == "MNG_EST" | dyad == "EST_NTH" | dyad == "NTH_EST"
+                | dyad == "EST_MAC" | dyad == "MAC_EST" | dyad == "EST_NOR" | dyad == "NOR_EST"
+                | dyad == "EST_POL" | dyad == "POL_EST" | dyad == "EST_POR" | dyad == "POR_EST"
+                | dyad == "EST_ROM" | dyad == "ROM_EST" | dyad == "EST_SLO" | dyad == "SLO_EST"
+                | dyad == "EST_SLV" | dyad == "SLV_EST" | dyad == "EST_SPN" | dyad == "SPN_EST"
+                | dyad == "EST_TUR" | dyad == "TUR_EST" | dyad == "EST_UKG" | dyad == "UKG_EST"
+                | dyad == "EST_USA" | dyad == "USA_EST"  | dyad == "FRN_GMY" | dyad == "GMY_FRN" 
+                | dyad  == "FRN_GRC" | dyad == "GRC_FRN"
+                | dyad == "FRN_HUN" | dyad == "HUN_FRN" | dyad == "FRN_ICE" | dyad == "ICE_FRN"
+                | dyad == "FRN_ITA" | dyad == "ITA_FRN" | dyad == "FRN_LAT" | dyad == "LAT_FRN"
+                | dyad == "FRN_LIT" | dyad == "LIT_FRN" | dyad == "FRN_LUX" | dyad == "LUX_FRN"
+                | dyad == "FRN_MNG" | dyad == "MNG_FRN" | dyad == "FRN_NTH" | dyad == "NTH_FRN"
+                | dyad == "FRN_MAC" | dyad == "MAC_FRN" | dyad == "FRN_NOR" | dyad == "NOR_FRN"
+                | dyad == "FRN_POL" | dyad == "POL_FRN" | dyad == "FRN_POR" | dyad == "POR_FRN"
+                | dyad == "FRN_ROM" | dyad == "ROM_FRN" | dyad == "FRN_SLO" | dyad == "SLO_FRN"
+                | dyad == "FRN_SLV" | dyad == "SLV_FRN" | dyad == "FRN_SPN" | dyad == "SPN_FRN"
+                | dyad == "FRN_TUR" | dyad == "TUR_FRN" | dyad == "FRN_UKG" | dyad == "UKG_FRN"
+                | dyad == "FRN_USA" | dyad == "USA_FRN" | dyad == "GMY_GRC" | dyad == "GRC_GMY" 
+                | dyad == "GMY_HUN" | dyad == "HUN_GMY" | dyad == "GMY_ICE" | dyad == "ICE_GMY"
+                | dyad == "GMY_ITA" | dyad == "ITA_GMY" | dyad == "GMY_LAT" | dyad == "LAT_GMY"
+                | dyad == "GMY_LIT" | dyad == "LIT_GMY" | dyad == "GMY_LUX" | dyad == "LUX_GMY"
+                | dyad == "GMY_MNG" | dyad == "MNG_GMY" | dyad == "GMY_NTH" | dyad == "NTH_GMY"
+                | dyad == "GMY_MAC" | dyad == "MAC_GMY" | dyad == "GMY_NOR" | dyad == "NOR_GMY"
+                | dyad == "GMY_POL" | dyad == "POL_GMY" | dyad == "GMY_POR" | dyad == "POR_GMY"
+                | dyad == "GMY_ROM" | dyad == "ROM_GMY" | dyad == "GMY_SLO" | dyad == "SLO_GMY"
+                | dyad == "GMY_SLV" | dyad == "SLV_GMY" | dyad == "GMY_SPN" | dyad == "SPN_GMY"
+                | dyad == "GMY_TUR" | dyad == "TUR_GMY" | dyad == "GMY_UKG" | dyad == "UKG_GMY"
+                | dyad == "GMY_USA" | dyad == "USA_GMY" | dyad == "GRC_HUN" | dyad == "HUN_GRC" 
+                | dyad == "GRC_ICE" | dyad == "ICE_GRC"
+                | dyad == "GRC_ITA" | dyad == "ITA_GRC" | dyad == "GRC_LAT" | dyad == "LAT_GRC"
+                | dyad == "GRC_LIT" | dyad == "LIT_GRC" | dyad == "GRC_LUX" | dyad == "LUX_GRC"
+                | dyad == "GRC_MNG" | dyad == "MNG_GRC" | dyad == "GRC_NTH" | dyad == "NTH_GRC"
+                | dyad == "GRC_MAC" | dyad == "MAC_GRC" | dyad == "GRC_NOR" | dyad == "NOR_GRC"
+                | dyad == "GRC_POL" | dyad == "POL_GRC" | dyad == "GRC_POR" | dyad == "POR_GRC"
+                | dyad == "GRC_ROM" | dyad == "ROM_GRC" | dyad == "GRC_SLO" | dyad == "SLO_GRC"
+                | dyad == "GRC_SLV" | dyad == "SLV_GRC" | dyad == "GRC_SPN" | dyad == "SPN_GRC"
+                | dyad == "GRC_TUR" | dyad == "TUR_GRC" | dyad == "GRC_UKG" | dyad == "UKG_GRC"
+                | dyad == "GRC_USA" | dyad == "USA_GRC"| dyad == "HUN_ICE" | dyad == "ICE_HUN"
+                | dyad == "HUN_ITA" | dyad == "ITA_HUN" | dyad == "HUN_LAT" | dyad == "LAT_HUN"
+                | dyad == "HUN_LIT" | dyad == "LIT_HUN" | dyad == "HUN_LUX" | dyad == "LUX_HUN"
+                | dyad == "HUN_MNG" | dyad == "MNG_HUN" | dyad == "HUN_NTH" | dyad == "NTH_HUN"
+                | dyad == "HUN_MAC" | dyad == "MAC_HUN" | dyad == "HUN_NOR" | dyad == "NOR_HUN"
+                | dyad == "HUN_POL" | dyad == "POL_HUN" | dyad == "HUN_POR" | dyad == "POR_HUN"
+                | dyad == "HUN_ROM" | dyad == "ROM_HUN" | dyad == "HUN_SLO" | dyad == "SLO_HUN"
+                | dyad == "HUN_SLV" | dyad == "SLV_HUN" | dyad == "HUN_SPN" | dyad == "SPN_HUN"
+                | dyad == "HUN_TUR" | dyad == "TUR_HUN" | dyad == "HUN_UKG" | dyad == "UKG_HUN"
+                | dyad == "HUN_USA" | dyad == "USA_HUN"| dyad == "ICE_ITA" | dyad == "ITA_ICE" 
+                | dyad == "ICE_LAT" | dyad == "LAT_ICE"
+                | dyad == "ICE_LIT" | dyad == "LIT_ICE" | dyad == "ICE_LUX" | dyad == "LUX_ICE"
+                | dyad == "ICE_MNG" | dyad == "MNG_ICE" | dyad == "ICE_NTH" | dyad == "NTH_ICE"
+                | dyad == "ICE_MAC" | dyad == "MAC_ICE" | dyad == "ICE_NOR" | dyad == "NOR_ICE"
+                | dyad == "ICE_POL" | dyad == "POL_ICE" | dyad == "ICE_POR" | dyad == "POR_ICE"
+                | dyad == "ICE_ROM" | dyad == "ROM_ICE" | dyad == "ICE_SLO" | dyad == "SLO_ICE"
+                | dyad == "ICE_SLV" | dyad == "SLV_ICE" | dyad == "ICE_SPN" | dyad == "SPN_ICE"
+                | dyad == "ICE_TUR" | dyad == "TUR_ICE" | dyad == "ICE_UKG" | dyad == "UKG_ICE"
+                | dyad == "ICE_USA" | dyad == "USA_ICE"  | dyad == "ITA_LAT" | dyad == "LAT_ITA"
+                | dyad == "ITA_LIT" | dyad == "LIT_ITA" | dyad == "ITA_LUX" | dyad == "LUX_ITA"
+                | dyad == "ITA_MNG" | dyad == "MNG_ITA" | dyad == "ITA_NTH" | dyad == "NTH_ITA"
+                | dyad == "ITA_MAC" | dyad == "MAC_ITA" | dyad == "ITA_NOR" | dyad == "NOR_ITA"
+                | dyad == "ITA_POL" | dyad == "POL_ITA" | dyad == "ITA_POR" | dyad == "POR_ITA"
+                | dyad == "ITA_ROM" | dyad == "ROM_ITA" | dyad == "ITA_SLO" | dyad == "SLO_ITA"
+                | dyad == "ITA_SLV" | dyad == "SLV_ITA" | dyad == "ITA_SPN" | dyad == "SPN_ITA"
+                | dyad == "ITA_TUR" | dyad == "TUR_ITA" | dyad == "ITA_UKG" | dyad == "UKG_ITA"
+                | dyad == "ITA_USA" | dyad == "USA_ITA"| dyad == "LAT_LIT" | dyad == "LIT_LAT" 
+                | dyad == "LAT_LUX" | dyad == "LUX_LAT"
+                | dyad == "LAT_MNG" | dyad == "MNG_LAT" | dyad == "LAT_NTH" | dyad == "NTH_LAT"
+                | dyad == "LAT_MAC" | dyad == "MAC_LAT" | dyad == "LAT_NOR" | dyad == "NOR_LAT"
+                | dyad == "LAT_POL" | dyad == "POL_LAT" | dyad == "LAT_POR" | dyad == "POR_LAT"
+                | dyad == "LAT_ROM" | dyad == "ROM_LAT" | dyad == "LAT_SLO" | dyad == "SLO_LAT"
+                | dyad == "LAT_SLV" | dyad == "SLV_LAT" | dyad == "LAT_SPN" | dyad == "SPN_LAT"
+                | dyad == "LAT_TUR" | dyad == "TUR_LAT" | dyad == "LAT_UKG" | dyad == "UKG_LAT"
+                | dyad == "LAT_USA" | dyad == "USA_LAT" | dyad == "LIT_LUX" | dyad == "LUX_LIT"
+                | dyad == "LIT_MNG" | dyad == "MNG_LIT" | dyad == "LIT_NTH" | dyad == "NTH_LIT"
+                | dyad == "LIT_MAC" | dyad == "MAC_LIT" | dyad == "LIT_NOR" | dyad == "NOR_LIT"
+                | dyad == "LIT_POL" | dyad == "POL_LIT" | dyad == "LIT_POR" | dyad == "POR_LIT"
+                | dyad == "LIT_ROM" | dyad == "ROM_LIT" | dyad == "LIT_SLO" | dyad == "SLO_LIT"
+                | dyad == "LIT_SLV" | dyad == "SLV_LIT" | dyad == "LIT_SPN" | dyad == "SPN_LIT"
+                | dyad == "LIT_TUR" | dyad == "TUR_LIT" | dyad == "LIT_UKG" | dyad == "UKG_LIT"
+                | dyad == "LIT_USA" | dyad == "USA_LIT" | dyad == "LUX_MNG" | dyad == "MNG_LUX" 
+                | dyad == "LUX_NTH" | dyad == "NTH_LUX"
+                | dyad == "LUX_MAC" | dyad == "MAC_LUX" | dyad == "LUX_NOR" | dyad == "NOR_LUX"
+                | dyad == "LUX_POL" | dyad == "POL_LUX" | dyad == "LUX_POR" | dyad == "POR_LUX"
+                | dyad == "LUX_ROM" | dyad == "ROM_LUX" | dyad == "LUX_SLO" | dyad == "SLO_LUX"
+                | dyad == "LUX_SLV" | dyad == "SLV_LUX" | dyad == "LUX_SPN" | dyad == "SPN_LUX"
+                | dyad == "LUX_TUR" | dyad == "TUR_LUX" | dyad == "LUX_UKG" | dyad == "UKG_LUX"
+                | dyad == "LUX_USA" | dyad == "USA_LUX"  | dyad == "MNG_MNG" | dyad == "MNG_MNG" 
+                | dyad == "MNG_NTH" | dyad == "NTH_MNG"
+                | dyad == "MNG_MAC" | dyad == "MAC_MNG" | dyad == "MNG_NOR" | dyad == "NOR_MNG"
+                | dyad == "MNG_POL" | dyad == "POL_MNG" | dyad == "MNG_POR" | dyad == "POR_MNG"
+                | dyad == "MNG_ROM" | dyad == "ROM_MNG" | dyad == "MNG_SLO" | dyad == "SLO_MNG"
+                | dyad == "MNG_SLV" | dyad == "SLV_MNG" | dyad == "MNG_SPN" | dyad == "SPN_MNG"
+                | dyad == "MNG_TUR" | dyad == "TUR_MNG" | dyad == "MNG_UKG" | dyad == "UKG_MNG"
+                | dyad == "MNG_USA" | dyad == "USA_MNG"  | dyad == "NTH_MAC" | dyad == "MAC_NTH" 
+                | dyad == "NTH_NOR" | dyad == "NOR_NTH"
+                | dyad == "NTH_POL" | dyad == "POL_NTH" | dyad == "NTH_POR" | dyad == "POR_NTH"
+                | dyad == "NTH_ROM" | dyad == "ROM_NTH" | dyad == "NTH_SLO" | dyad == "SLO_NTH"
+                | dyad == "NTH_SLV" | dyad == "SLV_NTH" | dyad == "NTH_SPN" | dyad == "SPN_NTH"
+                | dyad == "NTH_TUR" | dyad == "TUR_NTH" | dyad == "NTH_UKG" | dyad == "UKG_NTH"
+                | dyad == "NTH_USA" | dyad == "USA_NTH" | dyad == "MAC_NOR" | dyad == "NOR_MAC"
+                | dyad == "MAC_POL" | dyad == "POL_MAC" | dyad == "MAC_POR" | dyad == "POR_MAC"
+                | dyad == "MAC_ROM" | dyad == "ROM_MAC" | dyad == "MAC_SLO" | dyad == "SLO_MAC"
+                | dyad == "MAC_SLV" | dyad == "SLV_MAC" | dyad == "MAC_SPN" | dyad == "SPN_MAC"
+                | dyad == "MAC_TUR" | dyad == "TUR_MAC" | dyad == "MAC_UKG" | dyad == "UKG_MAC"
+                | dyad == "MAC_USA" | dyad == "USA_MAC" | dyad == "NOR_POL" | dyad == "POL_NOR" 
+                | dyad == "NOR_POR" | dyad == "POR_NOR"
+                | dyad == "NOR_ROM" | dyad == "ROM_NOR" | dyad == "NOR_SLO" | dyad == "SLO_NOR"
+                | dyad == "NOR_SLV" | dyad == "SLV_NOR" | dyad == "NOR_SPN" | dyad == "SPN_NOR"
+                | dyad == "NOR_TUR" | dyad == "TUR_NOR" | dyad == "NOR_UKG" | dyad == "UKG_NOR"
+                | dyad == "NOR_USA" | dyad == "USA_NOR" | dyad == "POL_POR" | dyad == "POR_POL"
+                | dyad == "POL_ROM" | dyad == "ROM_POL" | dyad == "POL_SLO" | dyad == "SLO_POL"
+                | dyad == "POL_SLV" | dyad == "SLV_POL" | dyad == "POL_SPN" | dyad == "SPN_POL"
+                | dyad == "POL_TUR" | dyad == "TUR_POL" | dyad == "POL_UKG" | dyad == "UKG_POL"
+                | dyad == "POL_USA" | dyad == "USA_POL" | dyad == "POR_ROM" | dyad == "ROM_POR" 
+                | dyad == "POR_SLO" | dyad == "SLO_POR"
+                | dyad == "POR_SLV" | dyad == "SLV_POR" | dyad == "POR_SPN" | dyad == "SPN_POR"
+                | dyad == "POR_TUR" | dyad == "TUR_POR" | dyad == "POR_UKG" | dyad == "UKG_POR"
+                | dyad == "POR_USA" | dyad == "USA_POR" | dyad == "ROM_SLO" | dyad == "SLO_ROM"
+                | dyad == "ROM_SLV" | dyad == "SLV_ROM" | dyad == "ROM_SPN" | dyad == "SPN_ROM"
+                | dyad == "ROM_TUR" | dyad == "TUR_ROM" | dyad == "ROM_UKG" | dyad == "UKG_ROM"
+                | dyad == "ROM_USA" | dyad == "USA_ROM"| dyad == "SLO_SLV" | dyad == "SLV_SLO" 
+                | dyad == "SLO_SPN" | dyad == "SPN_SLO"
+                | dyad == "SLO_TUR" | dyad == "TUR_SLO" | dyad == "SLO_UKG" | dyad == "UKG_SLO"
+                | dyad == "SLO_USA" | dyad == "USA_SLO"| dyad == "SLV_SPN" | dyad == "SPN_SLV"
+                | dyad == "SLV_TUR" | dyad == "TUR_SLV" | dyad == "SLV_UKG" | dyad == "UKG_SLV"
+                | dyad == "SLV_USA" | dyad == "USA_SLV"  | dyad == "SPN_TUR" | dyad == "TUR_SPN" 
+                | dyad == "SPN_UKG" | dyad == "UKG_SPN"
+                | dyad == "SPN_USA" | dyad == "USA_SPN" | dyad == "TUR_UKG" | dyad == "UKG_TUR"
+                | dyad == "TUR_USA" | dyad == "USA_TUR"  | dyad == "UKG_USA" | dyad == "USA_UKG") %>%
+  igraph::graph_from_data_frame() %>%
+  igraph::plot.igraph(layout = layout.fruchterman.reingold, vertex.label.color= "black", edge.arrow.size=  0.5, vertex.color = "purple", vertex.label.dist = 0, vertex.size = 20, main = "A Network Plot of the Dyadic Division of Labor Scores for the members of NATO in 2010",)
+
+RIO_network_plot <-  dyad_network %>% 
+  dplyr::filter(year == 2010) %>%
+  dplyr::filter(dist_rinsp_norm > 0.53) %>%
+  dplyr::select(statea_abb, stateb_abb,
+                dist_rinsp, dyad) %>%
+   dplyr::filter(dyad == "ARG_BHM" | dyad == "BHM_ARG" | dyad == "ARG_BRA" | dyad == "BRA_ARG" |
+                   dyad == "ARG_CHL" | dyad == "CHL_ARG" |  dyad == "ARG_COL" | dyad == "COL_ARG" |
+                   dyad == "ARG_COS" | dyad == "COS_ARG" | dyad == "ARG_DOM" | dyad == "DOM_ARG" |
+                   dyad == "ARG_SAL" | dyad == "SAL_ARG" | dyad == "ARG_GUA" | dyad == "GUA_ARG" |
+                   dyad == "ARG_HAI" | dyad == "HAI_ARG" | dyad == "ARG_HON" | dyad == "HON_ARG" |
+                   dyad == "ARG_PAN" | dyad == "PAN_ARG" | dyad == "ARG_PAR" | dyad == "PAR_ARG" |
+                   dyad == "ARG_PER" | dyad == "PER_ARG" | dyad == "ARG_TRI" | dyad == "TRI_ARG" |
+                   dyad == "ARG_USA" | dyad == "USA_ARG" | dyad == "ARG_URU" | dyad == "URU_ARG" |
+                   dyad == "ARG_VEN" | dyad == "VEN_ARG"  | dyad == "BHM_BRA" | dyad == "BRA_BHM" |
+                   dyad == "BHM_CHL" | dyad == "CHL_BHM" |  dyad == "BHM_COL" | dyad == "COL_BHM" |
+                   dyad == "BHM_COS" | dyad == "COS_BHM" | dyad == "BHM_DOM" | dyad == "DOM_BHM" |
+                   dyad == "BHM_SAL" | dyad == "SAL_BHM" | dyad == "BHM_GUA" | dyad == "GUA_BHM" |
+                   dyad == "BHM_HAI" | dyad == "HAI_BHM" | dyad == "BHM_HON" | dyad == "HON_BHM" |
+                   dyad == "BHM_PAN" | dyad == "PAN_BHM" | dyad == "BHM_PAR" | dyad == "PAR_BHM" |
+                   dyad == "BHM_PER" | dyad == "PER_BHM" | dyad == "BHM_TRI" | dyad == "TRI_BHM" |
+                   dyad == "BHM_USA" | dyad == "USA_BHM" | dyad == "BHM_URU" | dyad == "URU_BHM" |
+                   dyad == "BHM_VEN" | dyad == "VEN_BHM" |  dyad == "BRA_CHL" | dyad == "CHL_BRA" 
+                 |  dyad == "BRA_COL" | dyad == "COL_BRA" |
+                   dyad == "BRA_COS" | dyad == "COS_BRA" | dyad == "BRA_DOM" | dyad == "DOM_BRA" |
+                   dyad == "BRA_SAL" | dyad == "SAL_BRA" | dyad == "BRA_GUA" | dyad == "GUA_BRA" |
+                   dyad == "BRA_HAI" | dyad == "HAI_BRA" | dyad == "BRA_HON" | dyad == "HON_BRA" |
+                   dyad == "BRA_PAN" | dyad == "PAN_BRA" | dyad == "BRA_PAR" | dyad == "PAR_BRA" |
+                   dyad == "BRA_PER" | dyad == "PER_BRA" | dyad == "BRA_TRI" | dyad == "TRI_BRA" |
+                   dyad == "BRA_USA" | dyad == "USA_BRA" | dyad == "BRA_URU" | dyad == "URU_BRA" |
+                   dyad == "BRA_VEN" | dyad == "VEN_BRA" |  dyad == "CHL_COL" | dyad == "COL_CHL" |
+                   dyad == "CHL_COS" | dyad == "COS_CHL" | dyad == "CHL_DOM" | dyad == "DOM_CHL" |
+                   dyad == "CHL_SAL" | dyad == "SAL_CHL" | dyad == "CHL_GUA" | dyad == "GUA_CHL" |
+                   dyad == "CHL_HAI" | dyad == "HAI_CHL" | dyad == "CHL_HON" | dyad == "HON_CHL" |
+                   dyad == "CHL_PAN" | dyad == "PAN_CHL" | dyad == "CHL_PAR" | dyad == "PAR_CHL" |
+                   dyad == "CHL_PER" | dyad == "PER_CHL" | dyad == "CHL_TRI" | dyad == "TRI_CHL" |
+                   dyad == "CHL_USA" | dyad == "USA_CHL" | dyad == "CHL_URU" | dyad == "URU_CHL" |
+                   dyad == "CHL_VEN" | dyad == "VEN_CHL" |
+                   dyad == "COL_COS" | dyad == "COS_COL" | dyad == "COL_DOM" | dyad == "DOM_COL" |
+                   dyad == "COL_SAL" | dyad == "SAL_COL" | dyad == "COL_GUA" | dyad == "GUA_COL" |
+                   dyad == "COL_HAI" | dyad == "HAI_COL" | dyad == "COL_HON" | dyad == "HON_COL" |
+                   dyad == "COL_PAN" | dyad == "PAN_COL" | dyad == "COL_PAR" | dyad == "PAR_COL" |
+                   dyad == "COL_PER" | dyad == "PER_COL" | dyad == "COL_TRI" | dyad == "TRI_COL" |
+                   dyad == "COL_USA" | dyad == "USA_COL" | dyad == "COL_URU" | dyad == "URU_COL" |
+                   dyad == "COL_VEN" | dyad == "VEN_COL" | dyad == "COS_DOM" | dyad == "DOM_COS" |
+                   dyad == "COS_SAL" | dyad == "SAL_COS" | dyad == "COS_GUA" | dyad == "GUA_COS" |
+                   dyad == "COS_HAI" | dyad == "HAI_COS" | dyad == "COS_HON" | dyad == "HON_COS" |
+                   dyad == "COS_PAN" | dyad == "PAN_COS" | dyad == "COS_PAR" | dyad == "PAR_COS" |
+                   dyad == "COS_PER" | dyad == "PER_COS" | dyad == "COS_TRI" | dyad == "TRI_COS" |
+                   dyad == "COS_USA" | dyad == "USA_COS" | dyad == "COS_URU" | dyad == "URU_COS" |
+                   dyad == "COS_VEN" | dyad == "VEN_COS" |
+                   dyad == "DOM_SAL" | dyad == "SAL_DOM" | dyad == "DOM_GUA" | dyad == "GUA_DOM" |
+                   dyad == "DOM_HAI" | dyad == "HAI_DOM" | dyad == "DOM_HON" | dyad == "HON_DOM" |
+                   dyad == "DOM_PAN" | dyad == "PAN_DOM" | dyad == "DOM_PAR" | dyad == "PAR_DOM" |
+                   dyad == "DOM_PER" | dyad == "PER_DOM" | dyad == "DOM_TRI" | dyad == "TRI_DOM" |
+                   dyad == "DOM_USA" | dyad == "USA_DOM" | dyad == "DOM_URU" | dyad == "URU_DOM" |
+                   dyad == "DOM_VEN" | dyad == "VEN_DOM" | dyad == "SAL_GUA" | dyad == "GUA_SAL" |
+                   dyad == "SAL_HAI" | dyad == "HAI_SAL" | dyad == "SAL_HON" | dyad == "HON_SAL" |
+                   dyad == "SAL_PAN" | dyad == "PAN_SAL" | dyad == "SAL_PAR" | dyad == "PAR_SAL" |
+                   dyad == "SAL_PER" | dyad == "PER_SAL" | dyad == "SAL_TRI" | dyad == "TRI_SAL" |
+                   dyad == "SAL_USA" | dyad == "USA_SAL" | dyad == "SAL_URU" | dyad == "URU_SAL" |
+                   dyad == "SAL_VEN" | dyad == "VEN_SAL" |
+                   dyad == "GUA_HAI" | dyad == "HAI_GUA" | dyad == "GUA_HON" | dyad == "HON_GUA" |
+                   dyad == "GUA_PAN" | dyad == "PAN_GUA" | dyad == "GUA_PAR" | dyad == "PAR_GUA" |
+                   dyad == "GUA_PER" | dyad == "PER_GUA" | dyad == "GUA_TRI" | dyad == "TRI_GUA" |
+                   dyad == "GUA_USA" | dyad == "USA_GUA" | dyad == "GUA_URU" | dyad == "URU_GUA" |
+                   dyad == "GUA_VEN" | dyad == "VEN_GUA" | dyad == "HAI_HON" | dyad == "HON_HAI" |
+                   dyad == "HAI_PAN" | dyad == "PAN_HAI" | dyad == "HAI_PAR" | dyad == "PAR_HAI" |
+                   dyad == "HAI_PER" | dyad == "PER_HAI" | dyad == "HAI_TRI" | dyad == "TRI_HAI" |
+                   dyad == "HAI_USA" | dyad == "USA_HAI" | dyad == "HAI_URU" | dyad == "URU_HAI" |
+                   dyad == "HAI_VEN" | dyad == "VEN_HAI" |
+                   dyad == "HON_PAN" | dyad == "PAN_HON" | dyad == "HON_PAR" | dyad == "PAR_HON" |
+                   dyad == "HON_PER" | dyad == "PER_HON" | dyad == "HON_TRI" | dyad == "TRI_HON" |
+                   dyad == "HON_USA" | dyad == "USA_HON" | dyad == "HON_URU" | dyad == "URU_HON" |
+                   dyad == "HON_VEN" | dyad == "VEN_HON" | dyad == "PAN_PAR" | dyad == "PAR_PAN" |
+                   dyad == "PAN_PER" | dyad == "PER_PAN" | dyad == "PAN_TRI" | dyad == "TRI_PAN" |
+                   dyad == "PAN_USA" | dyad == "USA_PAN" | dyad == "PAN_URU" | dyad == "URU_PAN" |
+                   dyad == "PAN_VEN" | dyad == "VEN_PAN" |
+                   dyad == "PAR_PER" | dyad == "PER_PAR" | dyad == "PAR_TRI" | dyad == "TRI_PAR" |
+                   dyad == "PAR_USA" | dyad == "USA_PAR" | dyad == "PAR_URU" | dyad == "URU_PAR" |
+                   dyad == "PAR_VEN" | dyad == "VEN_PAR"  | dyad == "PER_TRI" | dyad == "TRI_PER" |
+                   dyad == "PER_USA" | dyad == "USA_PER" | dyad == "PER_URU" | dyad == "URU_PER" |
+                   dyad == "PER_VEN" | dyad == "VEN_PER"  |
+                   dyad == "TRI_USA" | dyad == "USA_TRI" | dyad == "TRI_URU" | dyad == "URU_TRI" |
+                   dyad == "TRI_VEN" | dyad == "VEN_TRI" | dyad == "USA_URU" | dyad == "URU_USA" |
+                   dyad == "USA_VEN" | dyad == "VEN_USA" | dyad == "URU_VEN" | dyad == "VEN_URU") %>%
+  igraph::graph_from_data_frame() %>%
+  igraph::plot.igraph(layout = layout.circle, vertex.label.color= "black", edge.arrow.size=  0, vertex.color = "purple", edge.width = (dyad_network$dist_rinsp_norm^2), vertex.label.dist = 0, vertex.size = 20, main = "A Network Plot of the Dyadic Division of Labor Scores for the members of the Rio Pact in 2010",)
+
+```
+
+# Save
+```{r}
+saveRDS(scores_df, paste0(here::here(), "/figures/alliance_networks","02b_DV_dol-dyad.rds"))
+```

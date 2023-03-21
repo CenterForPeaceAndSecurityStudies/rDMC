@@ -1,0 +1,349 @@
+---
+title: '01 Dependent Variable - Specialization'
+author:
+  - name: J Andrés Gannon
+    email: "andres.gannon@gmail.com"
+    url: jandresgannon.com
+    affiliation: Council on Foreign Relations
+format:
+  pdf:
+    fig-format: png
+    thanks: test text here
+editor: visual
+execute:
+  echo: false
+  warning: false
+  cache: true
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+header-includes:
+- \usepackage{tikz}
+- \usepackage{pgfplots}
+- \pgfplotsset{compat=newest}
+- \usetikzlibrary{plotmarks}
+- \usetikzlibrary{arrows.meta}
+- \usepgfplotslibrary{patchplots}
+- \usepackage{grffile}
+- \usepackage{caption}
+- \usepackage[utf8]{inputenc}
+- \usepackage[doublespacing]{setspace}
+- \AtBeginEnvironment{tabular}{\singlespacing}
+- \usepackage{float}
+- \usepackage{multirow}
+- \usepackage{tablefootnote}
+- \usepackage{pifont}
+- \usepackage{newunicodechar}
+- \usepackage{booktabs}
+- \usepackage{tabularx}
+- \newunicodechar{✓}{\ding{51}}
+bibliography: ForceStructure.bib
+---
+
+```{r knitr_options, echo = FALSE, warning = FALSE, cache = FALSE}
+library(knitr)
+library(kableExtra)
+library(magrittr)
+library(ggplot2)
+```
+
+```{r load data}
+rdmc_long <- readRDS(file = paste0(here::here(), '/data/rDMC_long_v1.rds')) %>%
+  dplyr::filter(year <= 2014)
+df <- readRDS(file = paste0(here::here(), '/data/rDMC_wide_v1.rds')) %>%
+  dplyr::filter(year <= 2014)
+
+# Keep a separate df of just the ID vars since ccode and cname were added later and are not included in the function
+id_vars <- df %>%
+  dplyr::select(year, country, stateabb, ccode)
+
+df <- df %>%
+  dplyr::select(-stateabb, -ccode)
+
+# Create vector of countries and years
+df_year <- unique(df$year)
+df_country <- unique(df$country)
+```
+
+\newpage
+
+# Specialization indices
+
+There are many different ways to measure specialization from economic and biology models. I look into specialization indexes composed by the following packages.
+
+## bipartite
+
+Using the bipartite package, we can then calculate a country-level measure of specialization using numerous indices. The scores are calculated by year since the distribution of technologies in year $t$ should not be impacted by the distribution of technologies in year $t+1$.
+
+$d'$ measures a country's deviation from a null model where tek portfolios were randomly determined, occurring in proportion to the available countries and technologies.
+
+paired differences index (PDI) - 0 means diversified and 1 means specialized
+
+proportional similarity - dissimilarity between resource use and availability, so the value is high if you consume a lot of things that are rare
+
+proportional generality - high values mean a balance diet, accounting for the abundance of resources
+
+```{r}
+# initial empty list
+my_list <- list()
+
+# define function
+func <- function(df_year){
+  test <- df %>% 
+    dplyr::filter(year == df_year)
+  names <- c('country', 'year')
+
+  test$obs <- apply(test[ , names], 1, paste, collapse = "_")
+
+  test <- test[ , !(names (test) %in% names)]
+
+  test <- test %>% tibble::column_to_rownames(var = "obs")
+
+  scores <- bipartite::specieslevel(test,
+                                    level = "lower",
+                                    index = c("d", "PDI", "proportional generality", "proportional similarity")) %>%
+    tibble::rownames_to_column()
+
+  # save each year as a dataframe in a list
+  my_list[paste("scores", df_year)] <<- list(scores) 
+}
+
+# loop through all years
+for(i in df_year){
+  func(df_year = i)
+}
+
+# bind nested datasets into a complete dataframe
+d_by_year <- do.call(rbind.data.frame, my_list)
+
+# Rename as the method used
+dprime <- as.data.frame(d_by_year) %>%
+  dplyr::rename(spec_pdi = PDI,
+                spec_propsim = proportional.similarity,
+                spec_propgen = proportional.generality,
+                spec_d = d)
+```
+
+## adiv functional entropy
+
+Calculates functional entropy within a country. It is calculated as:
+
+$R(p_i,D)=sum_k,l sqrt(p_k|i) sqrt(p_k|j) d_kl$
+
+where $p_i=(p_1|i, …, p_k|i, …, p_S|i)$ is the vector of relative species abundance within community $i$; $S$ is the number of species; $D=(d_kl)$ is the matrix of (phylogenetic or functional) dissimilarities among species, and $d_kl$ is the (phylogenetic or functional) dissimilarity between species $k$ and $l$.
+
+```{r}
+# initial empty list
+my_list <- list()
+
+# define function
+func <- function(df_year){
+
+  test <- df %>% 
+    dplyr::filter(year == df_year) %>%
+    replace(is.na(.), 0)
+
+  names <- c('country', 'year')
+
+  test$obs <- apply(test[ , names], 1, paste, collapse = "_")
+
+  test <- test[ , !(names (test) %in% names)]
+
+  test <- test %>% tibble::column_to_rownames(var = "obs")
+
+  scores <- test %>%
+    dplyr::filter_all(dplyr::any_vars(. != 0)) %>%
+    adiv::Rentropy(scale = TRUE) %>% 
+    tibble::rownames_to_column() %>%
+    dplyr::rename(fentrop = diversity)
+
+  # save each year as a dataframe in a list
+  my_list[paste("scores", df_year)] <<- list(scores) 
+}
+
+# loop through all years
+for(i in df_year){
+  func(df_year = i)
+}
+
+# bind nested datasets into a complete dataframe
+d_by_year <- do.call(rbind.data.frame, my_list)
+
+# Rename as the method used
+fentrop <- as.data.frame(d_by_year) %>%
+  dplyr::rename(spec_fentrop = fentrop)
+```
+
+## PSI
+
+Compares an individual country's military capability distribution to the world as a whole to create a proportional similarity index (PS) using Monte Carlo resampling (1000 simulations). It calculates the overlap between a country and the world for each capability that is the frequency of that capability in your military and the frequency of that capability in the world as a whole and a country score is then the average of the PS values for each capability
+
+The PSi score returned is the individual's proportional similarity index.
+
+```{r}
+# initial empty list
+my_list <- list()
+
+# define function
+func <- function(df_year){
+  
+  scores <- df %>% 
+    dplyr::filter(year == df_year) %>%
+    tidyr::unite(col = "rowname", country, year, remove = TRUE) %>%
+    tibble::column_to_rownames(var = "rowname") %>%
+    replace(is.na(.), 0) %>%
+    dplyr::filter_all(dplyr::any_vars(. != 0))
+
+  import <- RInSp::import.RInSp(scores)
+  
+  propsim <- RInSp::PSicalc(import,
+                            pop.diet = "average",
+                            replicates = 1000)
+  
+  result <- as.data.frame(propsim$PSi)
+  
+  names <- as.data.frame(import$ind.names)
+  
+  scores <- cbind(names, result) %>%
+    dplyr::rename(rowname = 'import$ind.names',
+                  PSi = 'propsim$PSi')
+
+  # save each year as a dataframe in a list
+  my_list[paste("scores", df_year)] <<- list(scores) 
+}
+
+# loop through all years
+for(i in df_year){
+  func(df_year = i)
+}
+
+# bind nested datasets into a complete dataframe
+d_by_year <- do.call(rbind.data.frame, my_list)
+
+# Rename as the method used
+psi <- as.data.frame(d_by_year) %>%
+    dplyr::rename(spec_psi = PSi)
+```
+
+## Dispersion
+
+As a new measure made by hand, from each technology-year we can calculate the country-year-capability standard deviations (SD). From this, we have all SDs across capabilities for a country-year. The SD of that is a measure is dispersion, with higher values meaning that country overproduced and underproduced more capabilities relative to their normal leve of over- or under- production
+
+```{r}
+dispersion <- rdmc_long %>%
+  dplyr::select(country, year, tek, unit_count) %>%
+  dplyr::group_by(year, tek) %>%
+  dplyr::mutate(equip_scale = round(scale(unit_count), 2)) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-unit_count) %>%
+  dplyr::mutate(year = as.factor(year)) %>%
+  dplyr::group_by(country, year) %>%
+  dplyr::summarise(sd = sd(equip_scale,
+                           na.rm = TRUE),
+                   .groups = "keep") %>%
+  dplyr::ungroup() %>%
+  tidyr::unite(col = "rowname", country, year, remove = TRUE) %>%
+  dplyr::rename(spec_dispersion = sd)
+```
+
+# Prep
+
+## Merge
+
+We now have multiple numeric scores for each country-year in terms of their military specialization. We now clean up the data so that can be appropriately processed.
+
+```{r}
+# Merge
+scores_df <- dplyr::left_join(dprime, fentrop) %>%
+  dplyr::left_join(., psi) %>%
+  dplyr::left_join(., dispersion) %>%
+  janitor::clean_names()
+
+# Re-create country and year as separate columns
+scores_df <- scores_df %>%
+  tidyr::separate(rowname, into = c("country", "year"), sep = "_") %>%
+  dplyr::mutate(year = as.numeric(year))
+
+# Use that to re-merge ccode and cname
+scores_df <- dplyr::left_join(scores_df, id_vars)
+
+# Fix formatting for title case
+scores_df$country <- stringr::str_to_title(scores_df$country)
+```
+
+## Normalize
+
+```{r, eval = FALSE}
+# Create object that finds the best normalization model
+bn_d <- bestNormalize::bestNormalize(scores_df$d)
+bn_fentrop <- bestNormalize::bestNormalize(scores_df$fentrop)
+bn_sd <- bestNormalize::bestNormalize(scores_df$sd)
+
+# Add normalized spec scores to df
+scores_df$d_norm <- predict(bn_d, scores_df$d)
+scores_df$fentrop_norm <- predict(bn_fentrop, scores_df$fentrop)
+scores_df$sd_norm <- predict(bn_sd, scores_df$sd)
+```
+
+# Save
+
+Save final output. A dataframe with country-year observations and specialization score indices as columns.
+
+```{r}
+scores_df <- scores_df %>%
+  dplyr::select(year, country, stateabb, ccode, 
+                dplyr::starts_with("spec_"))
+
+saveRDS(scores_df, paste0(here::here(), "/data/","01_DV-specialization.rds"))
+```
+
+# Test zone
+
+Archive
+
+```{r, eval = FALSE}
+# test zone
+scores <- df %>% 
+  dplyr::filter(year == 2014) %>%
+  tidyr::unite(col = "rowname", country, year, remove = TRUE) %>%
+  tibble::column_to_rownames(var = "rowname") %>%
+  replace(is.na(.), 0) %>%
+  dplyr::filter_all(dplyr::any_vars(. != 0))
+
+import <- RInSp::import.RInSp(scores)
+propsim <- RInSp::PSicalc(import,
+                          pop.diet = "average",
+                          replicates = 1000)
+
+result <- as.data.frame(propsim$PSi)
+names <- as.data.frame(import$ind.names)
+  
+psi <- cbind(names, result) %>%
+  dplyr::rename(rowname = 'import$ind.names',
+  PSi = 'propsim$PSi')
+
+rdmc_long %>%
+  dplyr::filter(year == 2014) %>%
+  dplyr::select(country, tek, unit_count) %>%
+  dplyr::group_by(tek) %>%
+  dplyr::mutate(mean_count = round(mean(unit_count, na.rm = TRUE), 1),
+                share = unit_count/sum(unit_count, na.rm = TRUE),
+                mean_share = mean(share, na.rm = TRUE)) %>%
+  dplyr::filter(country == "venezuela") %>%
+  DT::datatable()
+
+
+# other adiv functions
+## richness, ginisimpson, simpson, shannon, margalef, menhinick, mcintosh
+scores <- test %>%
+  dplyr::filter_all(dplyr::any_vars(. != 0)) %>%
+  adiv::speciesdiv(method = "full") %>% 
+  as.data.frame() %>%
+  tibble::rownames_to_column()
+
+## ginisimpson, simpson, shannon, heip, mcintosh, smithwilson
+scores <- test %>%
+  dplyr::filter_all(dplyr::any_vars(. != 0)) %>%
+  adiv::specieseve(method = "full") %>% 
+  as.data.frame() %>%
+  tibble::rownames_to_column()
+
+```

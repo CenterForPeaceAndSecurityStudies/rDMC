@@ -1,0 +1,251 @@
+---
+title: "01f Prep Country-Year Covariates"
+author: "Andres Gannon"
+date: "April 6, 2019"
+output:
+  html_document:
+    toc: yes
+  html_notebook:
+    toc: yes
+    toc_float: yes
+editor_options:
+  chunk_output_type: inline
+---
+<style>
+    body .main-container {
+        max-width: 100%;
+    }
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This document creates country dyad-year covariates for all states..
+
+# Set up
+```{r}
+library(magrittr)
+library(tidyverse)
+```
+
+# Load data 
+```{r}
+df <- readRDS(paste0(here::here(), "/data/","02b_DV_dol-dyad.rds"))
+
+# iiss <- readRDS(paste0(here::here(), "/data/IISS_long_raw.rds"))
+```
+
+# peacesciencer package
+```{r}
+library(peacesciencer)
+
+# Create dyads with a bunch of useful covariates
+dyads <- create_dyadyears(system = "cow",
+                         directed = FALSE) %>%
+   dplyr::filter(year >= 1970 &
+                    year <= 2014) %>%
+   add_atop_alliance() %>%
+   add_capital_distance() %>%
+   add_minimum_distance(system = "cow") %>%
+   add_contiguity() %>%
+   add_cow_majors() %>%
+   add_cow_trade() %>%
+   add_democracy() %>%
+   add_nmc() %>%
+   add_sdp_gdp(system = "cow")
+
+# Mutate to create new vars
+dyads <- dyads %>%
+   dplyr::mutate(milex1 = dplyr::na_if(milex1, -9),
+                 milex2 = dplyr::na_if(milex2, -9)) %>%
+   dplyr::mutate(landcontig = dplyr::if_else(conttype == 1, 
+                                             1, 0),
+                 cincprop = dplyr::if_else(cinc1 > cinc2, 
+                                           cinc2/cinc1, cinc1/cinc2),
+                 jointdemo = dplyr::if_else(polity21 >= -3 &
+                                               polity22 >= -3, 
+                                            1, 0),
+                 minwbgdp = dplyr::if_else(wbgdp2011est1 > wbgdp2011est2,
+                                             wbgdp2011est2, wbgdp2011est1),
+                 major_minor = dplyr::if_else(cowmaj1 + cowmaj2 == 1,
+                                               1, 0),
+                 major_major = dplyr::if_else(cowmaj1 + cowmaj2 == 2,
+                                             1, 0),
+                 gdpprop = dplyr::if_else(wbgdp2011est1 > wbgdp2011est2,
+                                          wbgdp2011est2/wbgdp2011est1, wbgdp2011est1/wbgdp2011est2),
+                 milexprop = dplyr::if_else(milex1 > milex2,
+                                            milex2/(milex1 + 1), milex1/(milex2 + 1)))
+
+# Merge with original data
+df <- dplyr::left_join(df, dyads)
+
+# Create a dyad column
+df <- df %>%
+   tidyr::unite(col = "dyad", statea_abb, stateb_abb, remove = FALSE)
+```
+
+# Interest alignment variables
+## Ideal point scores
+Based on UN voting data from Bailey et al 2017
+```{r}
+ipoint <- rio::import(paste0(here::here(), "/inst/extdata/Bailey-etal_JCR_2017/Dyadicdata.dta")) %>%
+   dplyr::filter(year >= 1970 &
+                    year <= 2014) %>%
+   dplyr::select(year, ccode1, ccode2, absidealdiff) %>%
+   dplyr::mutate(interestalign = absidealdiff * -1)
+
+# Merge
+df <- dplyr::left_join(df, ipoint)
+```
+
+## ATOP sscore
+These come from Chiba et al 2015.
+s_un_atop - unweighted s score calculated with ATOP data
+s_wt_atop - s score weighted by CINC
+pi_atop - scott's pi
+kappa_atop - cohen's k score
+```{r}
+atop_s <- rio::import(paste0(here::here(), "/inst/extdata/ATOP/atop-sscorev5.csv")) %>%
+   dplyr::select(year, ccode1, ccode2, s_un_atop, s_wt_atop, kappa_atop, pi_atop)
+
+# Merge
+df <- dplyr::left_join(df, atop_s)
+```
+
+## DCA
+```{r}
+# Load data
+dca <- read.csv(paste0(here::here(),"/inst/extdata/Kinne_JCR_2019/DCAD-v1.0-dyadic.csv")) %>%
+   dplyr::select(year, ccode1, ccode2, dcaGeneralV1) %>%
+   dplyr::filter(year >= 1970 &
+                    year <= 2014) %>%
+   dplyr::rename(dca = dcaGeneralV1)
+
+# Merge
+df <- dplyr::left_join(df, dca) %>%
+   tidyr::replace_na(list(dca = 0))
+```
+
+## Joint alliances
+Code if both states were members of important alliances like NATO, WP, etc
+```{r, eval = FALSE}
+ipe <- rio::import(paste0(here::here(), "/inst/extdata/ipe_data_resource/3. Graham_Tucker_IPE_v2_0.RDATA")) %>%
+  sjlabelled::remove_all_labels()
+
+mem <- ipe %>%
+  dplyr::select(year,
+                country_code_cow,
+                NATOmem_MEM) %>%
+  dplyr::mutate(NATOdur_MEM = year - NATOwhen_MEM)
+```
+
+# Asymmetry variables
+## Major power support signaled
+Major power support from McManus and Nieman 2019. It's a latent measure that includes alliance, leader visits, military exercises, nuclear deployments, arms transfers, troop deployments, and leader statements
+```{r}
+pwrsignal <- rio::import(paste0(here::here(), "/inst/extdata/McManus-Nieman_JPR_2019/Major Protege Dataset.dta")) %>%
+   dplyr::select(year, ccode1, ccode2, mean) %>%
+   dplyr::rename(pwrsignal = mean)
+
+# Merge
+df <- dplyr::left_join(df, pwrsignal)
+
+# May need to do it twice, by flipping ccode1 and ccode2
+pwrflip <- pwrsignal %>%
+   dplyr::rename(ccode2 = ccode1,
+                 ccode1 = ccode2,
+                 pwrsignal2 = pwrsignal)
+
+df <- dplyr::left_join(df, pwrflip) %>%
+   dplyr::mutate(pwrsignaltrue = dplyr::if_else(!is.na(pwrsignal), pwrsignal, pwrsignal2)) %>%
+   dplyr::select(-pwrsignal, -pwrsignal2) %>%
+   dplyr::rename(pwrsignal = pwrsignaltrue)
+```
+
+## DOE score
+```{r}
+doe <- read.csv(paste0(here::here(), "/inst/extdata/Carroll-Kenkel_AJPS_2019/doe-dyad-2.0.csv")) %>%
+   dplyr::filter(year >= 1970 &
+                    year <= 2014) %>%
+   dplyr::mutate(doeprop = dplyr::if_else(pr_win_a > pr_win_b,
+                                          pr_win_b/pr_win_a, pr_win_a/pr_win_b)) %>%
+   dplyr::select(year, ccode_a, ccode_b, doeprop) %>%
+   dplyr::rename(ccode1 = ccode_a,
+                 ccode2 = ccode_b)
+
+df <- dplyr::left_join(df, doe)
+```
+
+## Alliance instit
+```{r}
+# Load dyad-year ATOP info and filter by date and defense/offense then make long so each row is an atop alliance
+atop_dyad <- rio::import(paste0(here::here(), "/inst/extdata/ATOP/atop5_0dy.csv")) %>%
+   dplyr::filter(year >= 1970 &
+                    (defense == 1 |
+                        offense == 1)) %>%
+   dplyr::select(year, mem1, mem2, dplyr::starts_with("atopid")) %>%
+   dplyr::rename(ccode1 = mem1,
+                 ccode2 = mem2) %>%
+   tidyr::gather(key = "atopid",
+                value = "keep",
+                na.rm = TRUE,
+                -year, -ccode1, -ccode2) %>%
+   dplyr::select(-atopid) %>%
+   dplyr::rename(atopid = keep)
+
+# Merge atop instit
+atop_instit <- rio::import(paste0(here::here(), "/inst/extdata/ATOP/atopinst5_0.csv")) %>%
+   dplyr::select(atopid, milinst)
+
+atop_merged <- dplyr::left_join(atop_dyad, atop_instit)
+
+# keep highest level of instit for each dyad-year
+atop_merged <- atop_merged %>%
+   dplyr::select(-atopid) %>%
+   dplyr::group_by(year, ccode1, ccode2) %>%
+   dplyr::top_n(1, milinst)
+
+# merge with df
+df <- dplyr::left_join(df, atop_merged) %>%
+   tidyr::replace_na(list(milinst = 0)) %>%
+   dplyr::rename(alliance_instit = milinst)
+
+# merge Benson and Clinton depth
+benclint <- rio::import(paste0(here::here(), "/inst/extdata/Benson-Clinton_JCR_2014/AllianceDataScoreJCR_RR.csv")) %>%
+   dplyr::select(atopid, Depth.score)
+
+atop_merged <- dplyr::left_join(atop_dyad, benclint) %>%
+   dplyr::select(-atopid) %>%
+   dplyr::group_by(year, ccode1, ccode2) %>%
+   dplyr::top_n(1, Depth.score) %>%
+   dplyr::rename(alliance_depth = Depth.score)
+
+# merge with df
+df <- dplyr::left_join(df, atop_merged) %>%
+   tidyr::replace_na(list(alliance_depth = 0))
+```
+
+# Political variables
+## Former colony
+```{r, eval = FALSE}
+colonies <- rio::import(paste0(here::here(), "/inst/extdata/DiehlGoertz_PeaceData_2019/colonies.xls")) %>%
+   dplyr::select(-Notes) %>%
+   dplyr::group_by(Country, 'Year of Colonization', 'Year of Independence')
+```
+
+# Economic variables
+## Trade reliance
+
+# Other variables
+## Time
+Decade variable for fixed effects
+```{r}
+df <- df %>%
+  dplyr::mutate(decade = (year - year %% 10))
+```
+
+# Save data 
+```{r}
+saveRDS(df, paste0(here::here(), "/data/df_fulldata_dyad.rds"))
+```
