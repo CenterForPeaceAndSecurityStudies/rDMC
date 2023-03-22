@@ -1,0 +1,18 @@
+This folder contains files to assist in recreating and/or extending the dataset of failed alliance negotiations used in: 
+
+Poast, Paul. "Does Issue Linkage Work?  Evidence From European Alliance Negotiations, 1815-1945." 
+
+and
+
+Poast, Paul. Failed Diplomacy: Negotiation Break Down and the Credibility of Alliance Treaties.
+
+
+The files are:
+
+1) A Microsoft Excel file containing a spreadsheet with the failed negotiations identified by Poast and the sources used to code each of these negotiations.
+
+2) A STATA .dta file in which the country names have been replaced with the Correlates of War country code. 
+
+3) A .pdf document describing intercoder reliability checks I conducted, the results from these checks, and sensitivity analysis conducted with alternative failed negotiation codings.
+
+If you have any questions, please contact me at paul.poast@rutgers.edu

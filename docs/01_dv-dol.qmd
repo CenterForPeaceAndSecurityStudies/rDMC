@@ -1,5 +1,5 @@
 ---
-title: '01 Dependent Variable - Specialization'
+title: '01 Dependent Variable - Division of Labor'
 author:
   - name: J Andrés Gannon
     email: "andres.gannon@gmail.com"
@@ -45,233 +45,270 @@ library(magrittr)
 library(ggplot2)
 ```
 
+# Load data
+## rDMC
+
 ```{r load data}
-rdmc_long <- readRDS(file = paste0(here::here(), '/data/rDMC_long_v1.rds')) %>%
-  dplyr::filter(year <= 2014)
-df <- readRDS(file = paste0(here::here(), '/data/rDMC_wide_v1.rds')) %>%
-  dplyr::filter(year <= 2014)
+rdmc_long <- readRDS(file = paste0(here::here(), '/data/rDMC_long_v1.rds'))
+
+rdmc_wide <- readRDS(file = paste0(here::here(), '/data/rDMC_wide_v1.rds'))
 
 # Keep a separate df of just the ID vars since ccode and cname were added later and are not included in the function
-id_vars <- df %>%
-  dplyr::select(year, country, stateabb, ccode)
-
-df <- df %>%
-  dplyr::select(-stateabb, -ccode)
+id_vars <- rdmc_wide %>%
+  dplyr::select(year, stateabb, country, ccode)
 
 # Create vector of countries and years
-df_year <- unique(df$year)
-df_country <- unique(df$country)
+df_year <- unique(rdmc_wide$year)
+df_country <- unique(rdmc_wide$country)
 ```
 
-\newpage
+## Alliances
 
-# Specialization indices
+We want to get columns for each alliance that are dummy variables indicating whether that country was in that alliance
 
-There are many different ways to measure specialization from economic and biology models. I look into specialization indexes composed by the following packages.
+```{r}
+# Load
+atop_member <- rio::import(paste0(here::here(), "/inst/extdata/ATOP/atop5_1m.csv")) %>%
+  dplyr::filter(yrexit > 1970 |
+                  yrexit == 0) %>%
+  dplyr::mutate(yrexit = dplyr::if_else(yrexit == 0,
+                                        2023,
+                                        yrexit)) %>%
+  dplyr::filter(defense == 1) %>%
+  dplyr::select(atopid, member, yrent, yrexit) %>%
+  dplyr::distinct() %>%
+  dplyr::mutate(row = dplyr::row_number()) %>%
+  dplyr::group_by(row, atopid, member) %>%
+  dplyr::reframe(year = seq(yrent, yrexit)) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-row) %>%
+  dplyr::rename(ccode = 'member')
 
-## bipartite
+# Merge the alliance-year-member df with the wide version of the data and then create a column for alliance-year since that's what we're filter by when making the DoL index
+df <- dplyr::left_join(rdmc_wide, atop_member) %>%
+  dplyr::mutate(atopid = dplyr::if_else(is.na(atopid),
+                                              0, atopid)) %>%
+  tidyr::unite(col = "alliance_year",
+               atopid, year,
+               remove = FALSE) %>%
+  dplyr::select(-atopid)
+```
 
-Using the bipartite package, we can then calculate a country-level measure of specialization using numerous indices. The scores are calculated by year since the distribution of technologies in year $t$ should not be impacted by the distribution of technologies in year $t+1$.
+# Testing grounds
 
-$d'$ measures a country's deviation from a null model where tek portfolios were randomly determined, occurring in proportion to the available countries and technologies.
+## Alliance DoL
+We're going to test the alliance-level DoL variables, using a single alliance-year as a sample
 
-paired differences index (PDI) - 0 means diversified and 1 means specialized
-
-proportional similarity - dissimilarity between resource use and availability, so the value is high if you consume a lot of things that are rare
-
-proportional generality - high values mean a balance diet, accounting for the abundance of resources
+Higher H2 values means more complementary specialization within the alliance network
 
 ```{r}
 # initial empty list
 my_list <- list()
-
+  
 # define function
-func <- function(df_year){
+func <- function(df_allianceyear){
+  
   test <- df %>% 
-    dplyr::filter(year == df_year)
-  names <- c('country', 'year')
-
-  test$obs <- apply(test[ , names], 1, paste, collapse = "_")
-
-  test <- test[ , !(names (test) %in% names)]
-
-  test <- test %>% tibble::column_to_rownames(var = "obs")
-
-  scores <- bipartite::specieslevel(test,
-                                    level = "lower",
-                                    index = c("d", "PDI", "proportional generality", "proportional similarity")) %>%
-    tibble::rownames_to_column()
-
-  # save each year as a dataframe in a list
-  my_list[paste("scores", df_year)] <<- list(scores) 
-}
-
-# loop through all years
-for(i in df_year){
-  func(df_year = i)
-}
-
-# bind nested datasets into a complete dataframe
-d_by_year <- do.call(rbind.data.frame, my_list)
-
-# Rename as the method used
-dprime <- as.data.frame(d_by_year) %>%
-  dplyr::rename(spec_pdi = PDI,
-                spec_propsim = proportional.similarity,
-                spec_propgen = proportional.generality,
-                spec_d = d)
-```
-
-## adiv functional entropy
-
-Calculates functional entropy within a country. It is calculated as:
-
-$R(p_i,D)=sum_k,l sqrt(p_k|i) sqrt(p_k|j) d_kl$
-
-where $p_i=(p_1|i, …, p_k|i, …, p_S|i)$ is the vector of relative species abundance within community $i$; $S$ is the number of species; $D=(d_kl)$ is the matrix of (phylogenetic or functional) dissimilarities among species, and $d_kl$ is the (phylogenetic or functional) dissimilarity between species $k$ and $l$.
-
-```{r}
-# initial empty list
-my_list <- list()
-
-# define function
-func <- function(df_year){
-
-  test <- df %>% 
-    dplyr::filter(year == df_year) %>%
+    dplyr::filter(alliance_year == df_allianceyear) %>%
+    tidyr::unite(col = "rowname", alliance_year, ccode, remove = TRUE) %>%
+    tibble::column_to_rownames(var = "rowname") %>%
+    dplyr::select(-c(year, country, stateabb)) %>%
+    replace(is.na(.), 0) %>%
+    janitor::adorn_percentages(denominator = "col",
+                               na.rm = TRUE) %>%
+    janitor::untabyl() %>%
     replace(is.na(.), 0)
 
-  names <- c('country', 'year')
-
-  test$obs <- apply(test[ , names], 1, paste, collapse = "_")
-
-  test <- test[ , !(names (test) %in% names)]
-
-  test <- test %>% tibble::column_to_rownames(var = "obs")
-
-  scores <- test %>%
-    dplyr::filter_all(dplyr::any_vars(. != 0)) %>%
-    adiv::Rentropy(scale = TRUE) %>% 
-    tibble::rownames_to_column() %>%
-    dplyr::rename(fentrop = diversity)
-
-  # save each year as a dataframe in a list
-  my_list[paste("scores", df_year)] <<- list(scores) 
+  scores <- bipartite::networklevel(test,
+                                    index = "quantitative",
+                                    level = "lower") %>%
+    as.data.frame() %>%
+    dplyr::rename('scores' = '.')
+  
+  # save each alliance-year as a dataframe in a list
+  my_list[paste(df_allianceyear)] <<- list(scores)
 }
 
-# loop through all years
-for(i in df_year){
-  func(df_year = i)
+# loop through all alliance-years
+df_allianceyear <- unique(df$alliance_year)
+
+for(i in df_allianceyear){
+  func(df_allianceyear = i)
 }
 
+### AG pick up here after soccer!
 # bind nested datasets into a complete dataframe
-d_by_year <- do.call(rbind.data.frame, my_list)
+d_by_allianceyear <- do.call(rbind.data.frame, my_list)
 
 # Rename as the method used
-fentrop <- as.data.frame(d_by_year) %>%
-  dplyr::rename(spec_fentrop = fentrop)
-```
-
-## PSI
-
-Compares an individual country's military capability distribution to the world as a whole to create a proportional similarity index (PS) using Monte Carlo resampling (1000 simulations). It calculates the overlap between a country and the world for each capability that is the frequency of that capability in your military and the frequency of that capability in the world as a whole and a country score is then the average of the PS values for each capability
-
-The PSi score returned is the individual's proportional similarity index.
-
-```{r}
-# initial empty list
-my_list <- list()
-
-# define function
-func <- function(df_year){
-  
-  scores <- df %>% 
-    dplyr::filter(year == df_year) %>%
-    tidyr::unite(col = "rowname", country, year, remove = TRUE) %>%
-    tibble::column_to_rownames(var = "rowname") %>%
-    replace(is.na(.), 0) %>%
-    dplyr::filter_all(dplyr::any_vars(. != 0))
-
-  import <- RInSp::import.RInSp(scores)
-  
-  propsim <- RInSp::PSicalc(import,
-                            pop.diet = "average",
-                            replicates = 1000)
-  
-  result <- as.data.frame(propsim$PSi)
-  
-  names <- as.data.frame(import$ind.names)
-  
-  scores <- cbind(names, result) %>%
-    dplyr::rename(rowname = 'import$ind.names',
-                  PSi = 'propsim$PSi')
-
-  # save each year as a dataframe in a list
-  my_list[paste("scores", df_year)] <<- list(scores) 
-}
-
-# loop through all years
-for(i in df_year){
-  func(df_year = i)
-}
-
-# bind nested datasets into a complete dataframe
-d_by_year <- do.call(rbind.data.frame, my_list)
-
-# Rename as the method used
-psi <- as.data.frame(d_by_year) %>%
-    dplyr::rename(spec_psi = PSi)
-```
-
-## Dispersion
-
-As a new measure made by hand, from each technology-year we can calculate the country-year-capability standard deviations (SD). From this, we have all SDs across capabilities for a country-year. The SD of that is a measure is dispersion, with higher values meaning that country overproduced and underproduced more capabilities relative to their normal leve of over- or under- production
-
-```{r}
-dispersion <- rdmc_long %>%
-  dplyr::select(country, year, tek, unit_count) %>%
-  dplyr::group_by(year, tek) %>%
-  dplyr::mutate(equip_scale = round(scale(unit_count), 2)) %>%
-  dplyr::ungroup() %>%
-  dplyr::select(-unit_count) %>%
-  dplyr::mutate(year = as.factor(year)) %>%
-  dplyr::group_by(country, year) %>%
-  dplyr::summarise(sd = sd(equip_scale,
-                           na.rm = TRUE),
-                   .groups = "keep") %>%
-  dplyr::ungroup() %>%
-  tidyr::unite(col = "rowname", country, year, remove = TRUE) %>%
-  dplyr::rename(spec_dispersion = sd)
-```
-
-# Prep
-
-## Merge
-
-We now have multiple numeric scores for each country-year in terms of their military specialization. We now clean up the data so that can be appropriately processed.
-
-```{r}
-# Merge
-scores_df <- dplyr::left_join(dprime, fentrop) %>%
-  dplyr::left_join(., psi) %>%
-  dplyr::left_join(., dispersion) %>%
-  janitor::clean_names()
-
-# Re-create country and year as separate columns
-scores_df <- scores_df %>%
-  tidyr::separate(rowname, into = c("country", "year"), sep = "_") %>%
+h2 <- as.data.frame(d_by_allyyear) %>%
+  tibble::rownames_to_column(var = "id") %>%
+  tidyr::separate(id, into = c("atopid", "year"), sep = "_") %>%
+  dplyr::mutate(atopid = gsub("[^0-9.-]", "", atopid)) %>%
   dplyr::mutate(year = as.numeric(year))
 
-# Use that to re-merge ccode and cname
-scores_df <- dplyr::left_join(scores_df, id_vars)
-
-# Fix formatting for title case
-scores_df$country <- stringr::str_to_title(scores_df$country)
+saveRDS(h2, paste0(here::here(), "/data/","DV_dol-alliance.rds"))
 ```
 
-## Normalize
+```{r}
+# NATO 2004
+sample <- df %>%
+  dplyr::filter(alliance_year == "3180_2004") %>%
+  dplyr::select(-alliance_year, -year) %>%
+  replace(is.na(.), 0) %>%
+  janitor::adorn_percentages(denominator = "col",
+                               na.rm = TRUE) %>%
+  janitor::untabyl() %>%
+  replace(is.na(.), 0) %>%
+  tibble::column_to_rownames(var = "stateabb") %>%
+  dplyr::select(-country, -ccode)
 
-```{r, eval = FALSE}
+sample_raw <- df %>%
+  dplyr::filter(alliance_year == "3180_2004") %>%
+  tibble::column_to_rownames(var = "stateabb") %>%
+  dplyr::select(-country, -ccode, -alliance_year, -year) %>%
+  replace(is.na(.), 0) %>%
+  dplyr::select_if(colSums(.) != 0)
+
+# Get measures
+bipartite::networklevel(sample,
+                        index = "quantitative",
+                        level = "lower") %>%
+  as.data.frame() %>%
+  dplyr::rename('scores' = '.')
+```
+
+## Visuals
+
+```{r}
+# Viz as matrix
+sample %>%
+  bipartite::visweb(type = "diagonal",
+                    labsize = 3)
+
+# Viz as sankey
+sample %>%
+  bipartite::plotweb(labsize = 2,
+                     col.interaction = "red",
+                     bor.col.interaction = "gray50",
+                     y.lim = c(-0.1, 3),
+                     text.rot = 90)
+
+## Compare once we have the full df coded
+h2 %>%
+  dplyr::mutate(atopid = dplyr::recode(atopid, 
+                                       "3075" = "Rio Treaty",
+                                       "3150" = "OAS",
+                                       "3180" = "NATO",
+                                       "3210" = "US-Philippines",
+                                       "3215" = "ANZUS",
+                                       "3240" = "US-ROK",
+                                       "3260" = "US-Thailand",
+                                       "3355" = "US-Pakistan",
+                                       "3360" = "US-Turkey",
+                                       "3375" = "US-Japan")) %>%
+  ggplot(aes(x = year,
+             y = h2,
+             color = atopid)) +
+  geom_line() +
+  geom_smooth() +
+  gghighlight::gghighlight(atopid %in% c("Rio Treaty",
+                                         "OAS",
+                                         "NATO",
+                                         "ANZUS",
+                                         "US-Philippines",
+                                         "US-ROK",
+                                         "US-Thailand",
+                                         "US-Pakistan",
+                                         "US-Turkey",
+                                         "US-Japan"),
+                           use_direct_label = TRUE) +
+  theme_minimal() +
+  facet_wrap(~bilat) +
+  labs(title = "Division of Labor of Military Capabilities within Alliances",
+       caption = "US alliances highlighted",
+       x = "Year",
+       y = "Division of Labor") +
+  theme(legend.position = 'none')
+```
+
+## Within-alliance modularity
+
+Modularity is a way of thinking about who has an important role in an alliance network. It's a form of specialization in that it describes countries that have similar roles, where roles are determined by the military capabilities they possess. The interaction matrices within each module are similar, indicating those countries do similar things.
+
+A module is a group of states within an alliance that are more closely connected to each other than the countries in other modules. A way of thinking about modules is that countries in the same module are performing the same role (Guimera 2005)
+
+***Null model is important because it's what allows you to compare alliances of different sizes. You compare the real alliance to null simulations of that same matrix and those figures can be compared with one another (Vazquez & Aizen, 2003; Bluthgen et al., 2008; Dormann et al., 2009)
+
+C score is a standardized measure that refers to among-module role (meaning the entire alliance network). If all your teks are within your module, your C score is 0. If your teks are evenly distributed across all modules, your C score is 1
+Z score is a standardized measure that refers to within module role (meaning within its module within the alliance)
+
+Types of countries (Olesen et al 2007 from biology)
+peripheral country = low C and low Z. It's a specialist who really only does one thing
+connector country = high C and low Z. It glues modules together and is important for network coherence
+module hub country = low C and high Z. It is important to its own module
+network hub country = high C and high Z. It is important to its module and overall
+
+```{r}
+# Calculate cut off thresholds for cz scores
+## Computer scores
+modules <- sample_raw %>%
+  bipartite::computeModules() %>%
+  bipartite::czvalues(weighted = TRUE,
+                      level = "lower")
+
+## run null models to see what it would be in 1000 random simulations
+nulls <- bipartite::nullmodel(sample_raw,
+                              N = 1000)
+null.mod.list <- sapply(nulls, bipartite::computeModules)
+null.cz <- lapply(null.mod.list, bipartite::czvalues)
+
+## computer 95% for c values across all species in nulls
+null.cs <- sapply(null.cz, function(x) x$c)
+## identify threshold for uncommonly high c-values
+cval <- 1 - as.numeric(quantile(null.cs,
+                            0.95))
+
+## repeat the last 2 steps for z-values
+null.zs <- sapply(null.cz, function(x) x$z)
+zval <- as.numeric(quantile(null.zs,
+                            0.95,
+                            na.rm = TRUE))
+
+# Plot with those cut offs
+modules %>%
+  bipartite::computeModules() %>%
+  bipartite::czvalues(weighted = TRUE,
+                      level = "lower") %>%
+  as.data.frame() %>%
+  dplyr::mutate(c = 1 - c) %>%
+  tibble::rownames_to_column(var = "country") %>%
+  ggplot(aes(x = c,
+             y = z,
+             label = country)) +
+  geom_point(size = 4) +
+  ggrepel::geom_text_repel(size = 10) +
+  geom_vline(xintercept = cval,
+             color = "red",
+             size = 1) +
+  geom_hline(yintercept = zval,
+             color = "red",
+             size = 1) +
+  labs(x = "Country Specialization",
+       y = "Country Uniqueness",
+       caption = "Red lines indicate critical values calculated as 95% quantiles from 1,000 within-alliance simulations.") +
+  theme_minimal(base_size = 30)
+
+sample_raw %>%
+  bipartite::computeModules() %>%
+  bipartite::plotModuleWeb(rank = TRUE,
+                           weighted = TRUE)
+```
+
+# Archive
+
+## Normalize
+```{r, eval=FALSE}
 # Create object that finds the best normalization model
 bn_d <- bestNormalize::bestNormalize(scores_df$d)
 bn_fentrop <- bestNormalize::bestNormalize(scores_df$fentrop)
@@ -287,7 +324,7 @@ scores_df$sd_norm <- predict(bn_sd, scores_df$sd)
 
 Save final output. A dataframe with country-year observations and specialization score indices as columns.
 
-```{r}
+```{r, eval=FALSE}
 scores_df <- scores_df %>%
   dplyr::select(year, country, stateabb, ccode, 
                 dplyr::starts_with("spec_"))
@@ -296,54 +333,3 @@ saveRDS(scores_df, paste0(here::here(), "/data/","01_DV-specialization.rds"))
 ```
 
 # Test zone
-
-Archive
-
-```{r, eval = FALSE}
-# test zone
-scores <- df %>% 
-  dplyr::filter(year == 2014) %>%
-  tidyr::unite(col = "rowname", country, year, remove = TRUE) %>%
-  tibble::column_to_rownames(var = "rowname") %>%
-  replace(is.na(.), 0) %>%
-  dplyr::filter_all(dplyr::any_vars(. != 0))
-
-import <- RInSp::import.RInSp(scores)
-propsim <- RInSp::PSicalc(import,
-                          pop.diet = "average",
-                          replicates = 1000)
-
-result <- as.data.frame(propsim$PSi)
-names <- as.data.frame(import$ind.names)
-  
-psi <- cbind(names, result) %>%
-  dplyr::rename(rowname = 'import$ind.names',
-  PSi = 'propsim$PSi')
-
-rdmc_long %>%
-  dplyr::filter(year == 2014) %>%
-  dplyr::select(country, tek, unit_count) %>%
-  dplyr::group_by(tek) %>%
-  dplyr::mutate(mean_count = round(mean(unit_count, na.rm = TRUE), 1),
-                share = unit_count/sum(unit_count, na.rm = TRUE),
-                mean_share = mean(share, na.rm = TRUE)) %>%
-  dplyr::filter(country == "venezuela") %>%
-  DT::datatable()
-
-
-# other adiv functions
-## richness, ginisimpson, simpson, shannon, margalef, menhinick, mcintosh
-scores <- test %>%
-  dplyr::filter_all(dplyr::any_vars(. != 0)) %>%
-  adiv::speciesdiv(method = "full") %>% 
-  as.data.frame() %>%
-  tibble::rownames_to_column()
-
-## ginisimpson, simpson, shannon, heip, mcintosh, smithwilson
-scores <- test %>%
-  dplyr::filter_all(dplyr::any_vars(. != 0)) %>%
-  adiv::specieseve(method = "full") %>% 
-  as.data.frame() %>%
-  tibble::rownames_to_column()
-
-```
