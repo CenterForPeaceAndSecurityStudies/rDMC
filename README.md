@@ -16,9 +16,9 @@ devtools::install_github("CenterForPeaceAndSecurityStudies/rDMC")
 Planes, Trains, and Armored Mobiles: Introducing a Dataset of the Global Distribution of Military Capabilities (rDMC) [pdf](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/paper/rDMC_preprint.pdf)
 
 ### Tabular Data
-rDMC raw - [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_raw.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/01z_rDMC_raw.rds)
+rDMC raw - [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_raw_v1.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_raw_v1.rds)
 
-rDMC wide - [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_wide.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/01z_rDMC_wide.rds)
+rDMC wide - [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_wide_v1.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_wide_v1.rds)
 
-rDMC long - [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_long.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/01z_rDMC_long.rds)
+rDMC long - [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_long_v1.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_long_v1.rds)
 
