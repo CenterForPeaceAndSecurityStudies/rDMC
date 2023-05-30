@@ -1,0 +1,240 @@
+gwcode,gwabrev,gwname,gwname_clean,gw_start,gw_end,nation_wikidata_id,polity_name,microstate
+2,USA,United States of America,United States of America,1816-01-01,2012-12-31,Q30,United States of America,0
+20,CAN,Canada,Canada,1867-07-01,2012-12-31,Q16,Canada,0
+31,BHM,Bahamas,Bahamas,1973-07-10,2012-12-31,Q778,The Bahamas,0
+40,CUB,Cuba,Cuba,1902-05-20,2012-12-31,Q241,Cuba,0
+41,HAI,Haiti,Haiti,1816-01-01,1915-07-04,Q790,Haiti,0
+41,HAI,Haiti,Haiti,1934-08-15,2012-12-31,Q790,Haiti,0
+42,DOM,Dominican Republic,Dominican Republic,1844-02-27,2012-12-31,Q786,Dominican Republic,0
+51,JAM,Jamaica,Jamaica,1962-08-06,2012-12-31,Q766,Jamaica,0
+52,TRI,Trinidad and Tobago,Trinidad and Tobago,1962-08-31,2012-12-31,Q754,Trinidad and Tobago,0
+53,BAR,Barbados,Barbados,1966-11-30,2012-12-31,Q244,Barbados,0
+70,MEX,Mexico,Mexico,1821-07-01,2012-12-31,Q96,Mexico,0
+80,BLZ,Belize,Belize,1981-09-21,2012-12-31,Q242,Belize,0
+89,UPC,United Provinces of Central America,United Provinces of Central America,1823-07-01,1839-12-31,Q774,Guatemala,0
+90,GUA,Guatemala,Guatemala,1840-01-01,2012-12-31,Q774,Guatemala,0
+91,HON,Honduras,Honduras,1840-01-01,2012-12-31,Q783,Honduras,0
+92,SAL,El Salvador,El Salvador,1840-01-01,2012-12-31,Q792,El Salvador,0
+93,NIC,Nicaragua,Nicaragua,1840-01-01,2012-12-31,Q811,Nicaragua,0
+94,COS,Costa Rica,Costa Rica,1840-01-01,2012-12-31,Q800,Costa Rica,0
+95,PAN,Panama,Panama,1903-11-03,2012-12-31,Q804,Panama,0
+99,GCL,Great Colombia,Great Colombia,1821-08-30,1830-09-22,Q717,Venezuela,0
+100,COL,Colombia,Colombia,1830-09-23,2012-12-31,Q739,Colombia,0
+101,VEN,Venezuela,Venezuela,1829-01-01,2012-12-31,Q717,Venezuela,0
+110,GUY,Guyana,Guyana,1966-05-26,2012-12-31,Q734,Guyana,0
+115,SUR,Surinam,Surinam,1975-11-25,2012-12-31,Q730,Suriname,0
+130,ECU,Ecuador,Ecuador,1830-05-13,2012-12-31,Q736,Ecuador,0
+135,PER,Peru,Peru,1824-12-09,2012-12-31,Q419,Peru,0
+140,BRA,Brazil,Brazil,1822-09-07,2012-12-31,Q155,Brazil,0
+145,BOL,Bolivia,Bolivia,1825-08-06,2012-12-31,Q750,Bolivia,0
+150,PAR,Paraguay,Paraguay,1816-01-01,2012-12-31,Q733,Paraguay,0
+155,CHL,Chile,Chile,1818-04-01,2012-12-31,Q298,Chile,0
+160,ARG,Argentina,Argentina,1816-07-09,2012-12-31,Q414,Argentina,0
+165,URU,Uruguay,Uruguay,1830-05-26,2012-12-31,Q77,Uruguay,0
+200,UKG,United Kingdom,United Kingdom,1816-01-01,2012-12-31,Q145,United Kingdom,0
+205,IRE,Ireland,Ireland,1921-12-06,2012-12-31,Q27,Ireland,0
+210,NTH,Netherlands,Netherlands,1816-01-01,2012-12-31,Q55,Netherlands,0
+211,BEL,Belgium,Belgium,1830-10-04,2012-12-31,Q31,Belgium,0
+212,LUX,Luxembourg,Luxembourg,1867-05-11,2012-12-31,Q32,Luxembourg,0
+220,FRN,France,France,1816-01-01,2012-12-31,Q142,France,0
+225,SWZ,Switzerland,Switzerland,1816-01-01,2012-12-31,Q39,Switzerland,0
+230,SPN,Spain,Spain,1816-01-01,2012-12-31,Q29,Spain,0
+235,POR,Portugal,Portugal,1816-01-01,2012-12-31,Q45,Portugal,0
+240,HAN,Hanover,Hanover,1816-01-01,1871-01-17,Q164079,Kingdom of Hanover,0
+245,BAV,Bavaria,Bavaria,1816-01-01,1871-01-17,Q980,Bavaria,0
+255,GMY,Germany (Prussia),Prussia,1816-01-01,1945-05-07,Q38872,Prussia,0
+260,GFR,German Federal Republic,Federal Republic of Germany,1949-09-21,2012-12-31,Q183,Germany,0
+265,GDR,German Democratic Republic,German Democratic Republic,1949-10-05,1990-10-02,Q16957,East Germany,0
+267,BAD,Baden,Baden,1816-01-01,1871-01-17,Q6877935,Baden,0
+269,SAX,Saxony,Saxony,1816-01-01,1871-01-17,Q1202,Saxony,0
+271,WRT,Württemberg,Württemberg,1816-01-01,1871-01-17,Q159626,Württemberg,0
+273,HSE,Hesse-Kassel (Electoral),Hesse-Kassel,1816-01-01,1871-01-17,Q1199,Hesse,0
+275,HSD,Hesse-Darmstadt (Ducal),Hesse-Darmstadt,1816-01-01,1871-01-17,Q7932,Darmstadt Government Region,0
+280,MEC,Mecklenburg-Schwerin,Grand Duchy of Mecklenburg-Schwerin,1816-01-01,1871-01-17,Q1196,Mecklenburg-Western Pomerania,0
+290,POL,Poland,Poland,1918-11-11,2012-12-31,Q36,Poland,0
+300,AUH,Austria-Hungary,Austria-Hungary,1816-01-01,1918-11-13,Q40,Austria,0
+305,AUS,Austria,Austria,1918-11-14,2012-12-31,Q40,Austria,0
+310,HUN,Hungary,Hungary,1918-11-03,2012-12-31,Q28,Hungary,0
+315,CZE,Czechoslovakia,Czechoslovakia,1918-11-11,1992-12-31,Q213,Czech Republic,0
+316,CZR,Czech Republic,Czech Republic,1993-01-01,2012-12-31,Q213,Czech Republic,0
+317,SLO,Slovakia,Slovakia,1993-01-01,2012-12-31,Q214,Slovakia,0
+325,ITA,Italy/Sardinia,Italy,1816-01-01,2012-12-31,Q38,Italy,0
+327,PAP,Papal States,Papal States,1816-01-01,1870-09-22,Q170174,Papal States,0
+329,SIC,Two Sicilies,Two Sicilies,1816-01-01,1861-03-16,Q180393,Kingdom of the Two Sicilies,0
+332,MOD,Modena,Duchy of Modena and Reggio,1816-01-01,1861-03-16,Q252580,Duchy of Modena and Reggio,0
+335,PMA,Parma,Parma,1816-01-01,1861-03-16,Q2683,Parma,0
+337,TUS,Tuscany,Tuscany,1816-01-01,1861-03-16,Q1273,Tuscany,0
+338,MLT,Malta,Malta,1964-09-21,2012-12-31,Q233,Malta,0
+339,ALB,Albania,Albania,1913-01-01,2012-12-31,Q222,Albania,0
+341,MNG,Montenegro,Montenegro,1868-01-01,1915-07-01,Q236,Montenegro,0
+341,MNG,Montenegro,Montenegro,2006-06-03,2012-12-31,Q236,Montenegro,0
+343,MAC,Macedonia (Former Yugoslav Republic of),Republic of Macedonia,1991-11-20,2012-12-31,Q221,Republic of Macedonia,0
+344,CRO,Croatia,Croatia,1992-04-27,2012-12-31,Q224,Croatia,0
+340,SER,Serbia,Serbia,1878-07-13,1915-10-01,Q403,Serbia,0
+340,SER,Serbia,Serbia,2006-06-05,2012-12-31,Q403,Serbia,0
+345,YUG,Yugoslavia,Yugoslavia,1918-12-01,2006-06-04,Q403,Serbia,0
+346,BOS,Bosnia-Herzegovina,Bosnia-Herzegovina,1992-04-27,2012-12-31,Q225,Bosnia and Herzegovina,0
+347,KOS,Kosovo,Kosovo,2008-02-17,2012-12-31,Q1246,Kosovo,0
+349,SLV,Slovenia,Slovenia,1992-04-27,2012-12-31,Q215,Slovenia,0
+350,GRC,Greece,Greece,1828-04-25,2012-12-31,Q41,Greece,0
+352,CYP,Cyprus,Cyprus,1960-08-16,2012-12-31,Q229,Cyprus,0
+355,BUL,Bulgaria,Bulgaria,1878-03-03,2012-12-31,Q219,Bulgaria,0
+359,MLD,Moldova,Moldova,1991-08-27,2012-12-31,Q217,Moldova,0
+360,RUM,Rumania,Rumania,1878-07-13,2012-12-31,Q218,Romania,0
+365,RUS,Russia (Soviet Union),Russia,1816-01-01,2012-12-31,Q159,Russia,0
+366,EST,Estonia,Estonia,1918-11-11,1940-06-01,Q191,Estonia,0
+366,EST,Estonia,Estonia,1991-09-06,2012-12-31,Q191,Estonia,0
+367,LAT,Latvia,Latvia,1918-11-11,1940-06-01,Q211,Latvia,0
+367,LAT,Latvia,Latvia,1991-09-06,2012-12-31,Q211,Latvia,0
+368,LIT,Lithuania,Lithuania,1918-02-16,1940-06-01,Q37,Lithuania,0
+368,LIT,Lithuania,Lithuania,1991-09-06,2012-12-31,Q37,Lithuania,0
+369,UKR,Ukraine,Ukraine,1991-12-01,2012-12-31,Q212,Ukraine,0
+370,BLR,Belarus (Byelorussia),Belarus,1991-08-25,2012-12-31,Q184,Belarus,0
+371,ARM,Armenia,Armenia,1991-12-21,2012-12-31,Q399,Armenia,0
+372,GRG,Georgia,Georgia,1991-09-06,2012-12-31,Q230,Georgia,0
+373,AZE,Azerbaijan,Azerbaijan,1991-12-21,2012-12-31,Q227,Azerbaijan,0
+375,FIN,Finland,Finland,1917-12-06,2012-12-31,Q33,Finland,0
+380,SWD,Sweden,Sweden,1816-01-01,2012-12-31,Q34,Sweden,0
+385,NOR,Norway,Norway,1905-08-26,2012-12-31,Q20,Norway,0
+390,DEN,Denmark,Denmark,1816-01-01,2012-12-31,Q35,Denmark,0
+395,ICE,Iceland,Iceland,1944-06-17,2012-12-31,Q189,Iceland,0
+402,CAP,Cape Verde,Cape Verde,1975-07-05,2012-12-31,Q1011,Cape Verde,0
+404,GNB,Guinea-Bissau,Guinea-Bissau,1974-09-10,2012-12-31,Q1007,Guinea-Bissau,0
+411,EQG,Equatorial Guinea,Equatorial Guinea,1968-10-12,2012-12-31,Q983,Equatorial Guinea,0
+420,GAM,Gambia,Gambia,1965-02-18,2012-12-31,Q1005,The Gambia,0
+432,MLI,Mali,Mali,1960-09-22,2012-12-31,Q912,Mali,0
+433,SEN,Senegal,Senegal,1960-04-04,2012-12-31,Q1041,Senegal,0
+434,BEN,Benin,Benin,1960-08-01,2012-12-31,Q962,Benin,0
+435,MAA,Mauritania,Mauritania,1960-11-28,2012-12-31,Q1025,Mauritania,0
+436,NIR,Niger,Niger,1960-08-03,2012-12-31,Q1032,Niger,0
+437,CDI,Cote D�Ivoire,Ivory Coast,1960-08-07,2012-12-31,Q1008,Ivory Coast,0
+438,GUI,Guinea,Guinea,1958-10-02,2012-12-31,Q3733,Conakry,0
+439,BFO,Burkina Faso (Upper Volta),Burkina Faso,1960-08-05,2012-12-31,Q965,Burkina Faso,0
+450,LBR,Liberia,Liberia,1847-07-26,2012-12-31,Q1014,Liberia,0
+451,SIE,Sierra Leone,Sierra Leone,1961-04-27,2012-12-31,Q1044,Sierra Leone,0
+452,GHA,Ghana,Ghana,1957-03-06,2012-12-31,Q117,Ghana,0
+461,TOG,Togo,Togo,1960-04-27,2012-12-31,Q945,Togo,0
+471,CAO,Cameroon,Cameroon,1960-01-01,2012-12-31,Q1009,Cameroon,0
+475,NIG,Nigeria,Nigeria,1960-10-01,2012-12-31,Q1033,Nigeria,0
+481,GAB,Gabon,Gabon,1960-08-17,2012-12-31,Q1000,Gabon,0
+482,CEN,Central African Republic,Central African Republic,1960-08-13,2012-12-31,Q929,Central African Republic,0
+483,CHA,Chad,Chad,1960-08-11,2012-12-31,Q657,Chad,0
+484,CON,Congo,Congo,1960-08-15,2012-12-31,Q974,Democratic Republic of the Congo,0
+490,DRC,"Congo, Democratic Republic of (Zaire)",Zaire,1960-06-30,2012-12-31,Q6500954,Zaire,0
+500,UGA,Uganda,Uganda,1962-10-09,2012-12-31,Q1036,Uganda,0
+501,KEN,Kenya,Kenya,1963-12-12,2012-12-31,Q114,Kenya,0
+510,TAZ,Tanzania/Tanganyika,Tanzania,1961-12-09,2012-12-31,Q924,Tanzania,0
+511,ZAN,Zanzibar,Zanzibar,1963-12-19,1964-04-26,Q1774,Zanzibar,0
+516,BUI,Burundi,Burundi,1962-07-01,2012-12-31,Q967,Burundi,0
+517,RWA,Rwanda,Rwanda,1962-01-07,2012-12-31,Q1037,Rwanda,0
+520,SOM,Somalia,Somalia,1960-07-01,2012-12-31,Q1045,Somalia,0
+522,DJI,Djibouti,Djibouti,1977-06-27,2012-12-31,Q977,Djibouti,0
+530,ETH,Ethiopia,Ethiopia,1855-02-11,2012-12-31,Q115,Ethiopia,0
+531,ERI,Eritrea,Eritrea,1993-05-24,2012-12-31,Q986,Eritrea,0
+540,ANG,Angola,Angola,1975-11-11,2012-12-31,Q916,Angola,0
+541,MZM,Mozambique,Mozambique,1975-06-25,2012-12-31,Q1029,Mozambique,0
+551,ZAM,Zambia,Zambia,1964-10-24,2012-12-31,Q953,Zambia,0
+552,ZIM,Zimbabwe (Rhodesia),Rhodesia,1965-11-11,2012-12-31,Q954,Zimbabwe,0
+553,MAW,Malawi,Malawi,1964-07-06,2012-12-31,Q1020,Malawi,0
+560,SAF,South Africa,South Africa,1910-05-31,2012-12-31,Q5465,Cape Town,0
+563,TRA,Transvaal,Transvaal,1852-01-01,1910-05-30,Q1050,Swaziland,0
+564,OFS,Orange Free State,Orange Free State,1854-03-28,1910-05-30,Q218023,Orange Free State,0
+565,NAM,Namibia,Namibia,1990-03-21,2012-12-31,Q1030,Namibia,0
+570,LES,Lesotho,Lesotho,1966-10-04,2012-12-31,Q1013,Lesotho,0
+571,BOT,Botswana,Botswana,1966-09-30,2012-12-31,Q963,Botswana,0
+572,SWA,Swaziland,Swaziland,1968-09-06,2012-12-31,Q1050,Swaziland,0
+580,MAG,Madagascar (Malagasy),Madagascar,1816-01-01,1896-08-05,Q1019,Madagascar,0
+580,MAG,Madagascar,Madagascar,1960-06-26,2012-12-31,Q1019,Madagascar,0
+581,COM,Comoros,Comoros,1975-07-06,2012-12-31,Q970,Comoros,0
+590,MAS,Mauritius,Mauritius,1968-03-12,2012-12-31,Q1027,Mauritius,0
+600,MOR,Morocco,Morocco,1816-01-01,1904-01-01,Q1028,Morocco,0
+600,MOR,Morocco,Morocco,1956-03-02,2012-12-31,Q1028,Morocco,0
+615,ALG,Algeria,Algeria,1816-01-01,1830-07-05,Q262,Algeria,0
+615,ALG,Algeria,Algeria,1962-07-05,2012-12-31,Q262,Algeria,0
+616,TUN,Tunisia,Tunisia,1816-01-01,1881-05-12,Q948,Tunisia,0
+616,TUN,Tunisia,Tunisia,1956-01-01,2012-12-31,Q948,Tunisia,0
+620,LIB,Libya,Libya,1816-01-01,1834-12-31,Q1016,Libya,0
+620,LIB,Libya,Libya,1951-12-24,2012-12-31,Q1016,Libya,0
+625,SUD,Sudan,Sudan,1956-01-01,2012-12-31,Q1049,Sudan,0
+626,SSD,South Sudan,South Sudan,2011-07-09,2012-12-31,Q958,South Sudan,0
+630,IRN,Iran (Persia),Iran,1816-01-01,2012-12-31,Q794,Iran,0
+640,TUR,Turkey (Ottoman Empire),Ottoman Empire,1816-01-01,2012-12-31,Q12560,Ottoman Empire,0
+645,IRQ,Iraq,Iraq,1932-10-03,2012-12-31,Q796,Iraq,0
+651,EGY,Egypt,Egypt,1827-01-01,1855-12-31,Q79,Egypt,0
+651,EGY,Egypt,Egypt,1922-02-28,2012-12-31,Q79,Egypt,0
+652,SYR,Syria,Syria,1946-01-01,2012-12-31,Q858,Syria,0
+660,LEB,Lebanon,Lebanon,1944-11-22,2012-12-31,Q822,Lebanon,0
+663,JOR,Jordan,Jordan,1946-05-25,2012-12-31,Q810,Jordan,0
+666,ISR,Israel,Israel,1948-05-14,2012-12-31,Q801,Israel,0
+670,SAU,Saudi Arabia,Saudi Arabia,1932-09-23,2012-12-31,Q851,Saudi Arabia,0
+678,YEM,Yemen (Arab Republic of Yemen),Yemen,1918-10-30,2012-12-31,Q805,Yemen,0
+680,YPR,"Yemen, People's Republic of",South Yemen,1967-11-30,1990-05-21,Q199841,South Yemen,0
+690,KUW,Kuwait,Kuwait,1961-06-19,2012-12-31,Q817,Kuwait,0
+692,BAH,Bahrain,Bahrain,1971-08-15,2012-12-31,Q398,Bahrain,0
+694,QAT,Qatar,Qatar,1971-09-03,2012-12-31,Q846,Qatar,0
+696,UAE,United Arab Emirates,United Arab Emirates,1971-12-02,2012-12-31,Q878,United Arab Emirates,0
+698,OMA,Oman,Oman,1816-01-01,2012-12-31,Q842,Oman,0
+700,AFG,Afghanistan,Afghanistan,1816-01-01,1888-12-30,Q889,Afghanistan,0
+700,AFG,Afghanistan,Afghanistan,1919-05-01,2012-12-31,Q889,Afghanistan,0
+701,TKM,Turkmenistan,Turkmenistan,1991-10-27,2012-12-31,Q874,Turkmenistan,0
+702,TAJ,Tajikistan,Tajikistan,1991-09-09,2012-12-31,Q863,Tajikistan,0
+703,KYR,Kyrgyz Republic,Kyrgyz Republic,1991-08-31,2012-12-31,Q813,Kyrgyzstan,0
+704,UZB,Uzbekistan,Uzbekistan,1991-08-31,2012-12-31,Q265,Uzbekistan,0
+705,KZK,Kazakhstan,Kazakhstan,1991-12-16,2012-12-31,Q232,Kazakhstan,0
+710,CHN,China,China,1816-01-01,2012-12-31,Q148,People's Republic of China,0
+711,TBT,Tibet,Tibet,1913-01-01,1950-10-01,Q17269,Tibet Autonomous Region,0
+712,MON,Mongolia,Mongolia,1921-03-13,2012-12-31,Q711,Mongolia,0
+713,TAW,Taiwan,Taiwan,1949-12-08,2012-12-31,Q865,Taiwan,0
+730,KOR,Korea,Korea,1816-01-01,1910-08-22,Q18097,Korea,0
+731,PRK,"Korea, People's Republic of",North Korea,1948-09-09,2012-12-31,Q423,North Korea,0
+732,ROK,"Korea, Republic of",Republic of Korea,1948-08-15,2012-12-31,Q884,South Korea,0
+740,JPN,Japan,Japan,1816-01-01,2012-12-31,Q17,Japan,0
+750,IND,India,India,1947-08-15,2012-12-31,Q668,India,0
+760,BHU,Bhutan,Bhutan,1949-01-01,2012-12-31,Q917,Bhutan,0
+770,PAK,Pakistan,Pakistan,1947-08-14,2012-12-31,Q843,Pakistan,0
+771,BNG,Bangladesh,Bangladesh,1971-12-16,2012-12-31,Q902,Bangladesh,0
+775,MYA,Myanmar (Burma),Myanmar,1816-01-01,1885-12-31,Q836,Myanmar,0
+775,MYA,Myanmar (Burma),Myanmar,1948-01-04,2012-12-31,Q836,Myanmar,0
+780,SRI,Sri Lanka (Ceylon),Sri Lanka,1948-02-04,2012-12-31,Q854,Sri Lanka,0
+781,MAD,Maldives,Maldives,1965-05-26,2012-12-31,Q826,Maldives,0
+790,NEP,Nepal,Nepal,1816-01-01,2012-12-31,Q837,Nepal,0
+800,THI,Thailand,Thailand,1816-01-01,2012-12-31,Q869,Thailand,0
+811,CAM,Cambodia (Kampuchea),Kampuchea,1953-11-09,2012-12-31,Q424,Cambodia,0
+812,LAO,Laos,Laos,1954-05-01,2012-12-31,Q819,Laos,0
+815,VNM,Vietnam (Annam/Cochin China/Tonkin),Vietnam,1816-01-01,1893-01-01,Q881,Vietnam,0
+816,DRV,"Vietnam, Democratic Republic of",Vietnam,1954-05-01,2012-12-31,Q881,Vietnam,0
+817,RVN,"Vietnam, Republic of",Republic of Vietnam,1954-05-01,1975-04-30,Q180573,South Vietnam,0
+820,MAL,Malaysia,Malaysia,1957-08-31,2012-12-31,Q833,Malaysia,0
+830,SIN,Singapore,Singapore,1965-08-09,2012-12-31,Q334,Singapore,0
+835,BRU,Brunei,Brunei,1984-01-01,2012-12-31,Q921,Brunei,0
+840,PHI,Philippines,Philippines,1946-07-04,2012-12-31,Q928,Philippines,0
+850,INS,Indonesia,Indonesia,1945-08-17,2012-12-31,Q252,Indonesia,0
+860,ETM,East Timor,East Timor,2002-05-20,2012-12-31,Q574,East Timor,0
+900,AUL,Australia,Australia,1901-01-01,2012-12-31,Q408,Australia,0
+910,PNG,Papua New Guinea,Papua New Guinea,1975-09-16,2012-12-31,Q691,Papua New Guinea,0
+920,NEW,New Zealand,New Zealand,1907-09-01,2012-12-31,Q664,New Zealand,0
+940,SOL,Solomon Islands,Solomon Islands,1978-07-07,2012-12-31,Q685,Solomon Islands,0
+950,FJI,Fiji,Fiji,1970-10-10,2012-12-31,Q712,Fiji,0
+54,DMA,Dominica,Dominica,1978-11-03,2012-12-31,Q784,Dominica,1
+55,GRN,Grenada,Grenada,1974-02-07,2012-12-31,Q769,Grenada,1
+56,SLU,Saint Lucia,Saint Lucia,1979-02-22,2012-12-31,Q760,Saint Lucia,1
+57,SVG,Saint Vincent and the Grenadines,Saint Vincent and the Grenadines,1979-10-27,2012-12-31,Q757,Saint Vincent and the Grenadines,1
+58,AAB,Antigua & Barbuda,Antigua and Barbuda,1981-11-01,2012-12-31,Q781,Antigua and Barbuda,1
+60,SKN,Saint Kitts and Nevis,Saint Kitts and Nevis,1983-09-19,2012-12-31,Q763,Saint Kitts and Nevis,1
+221,MNC,Monaco,Monaco,1816-01-01,2012-12-31,Q235,Monaco,1
+223,LIE,Liechtenstein,Liechtenstein,1816-01-01,2012-12-31,Q347,Liechtenstein,1
+331,SNM,San Marino,San Marino,1816-01-01,2012-12-31,Q238,San Marino,1
+232,AND,Andorra,Andorra,1816-01-01,2012-12-31,Q228,Andorra,1
+396,ABK,Abkhazia,Abkhazia,2008-08-26,2012-12-31,Q23334,Abkhazia,1
+397,SOT,South Ossetia,South Ossetia-Alania,2008-08-26,2012-12-31,Q23427,South Ossetia-Alania,1
+403,STP,S�o Tom� and Principe,São Tomé and Príncipe,1975-07-12,2012-12-31,Q1039,São Tomé and Príncipe,1
+591,SEY,Seychelles,Seychelles,1976-06-29,2012-12-31,Q1042,Seychelles,1
+935,VAN,Vanuatu,Vanuatu,1980-06-30,2012-12-31,Q686,Vanuatu,1
+970,KBI,Kiribati,Kiribati,1979-07-12,2012-12-31,Q710,Kiribati,1
+971,NAU,Nauru,Nauru,1968-12-31,2012-12-31,Q697,Nauru,1
+972,TON,Tonga,Tonga,1970-06-04,2012-12-31,Q678,Tonga,1
+973,TUV,Tuvalu,Tuvalu,1978-10-01,2012-12-31,Q672,Tuvalu,1
+983,MSI,Marshall Islands,Marshall Islands,1986-10-21,2012-12-31,Q709,Marshall Islands,1
+986,PAL,Palau,Palau,1994-10-01,2012-12-31,Q695,Palau,1
+987,FSM,Federated States of Micronesia,Federated States of Micronesia,1986-11-03,2012-12-31,Q702,Federated States of Micronesia,1
+990,WSM,Samoa/Western Samoa,Samoa,1962-01-01,2012-12-31,Q683,Samoa,1
