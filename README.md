@@ -13,7 +13,7 @@ devtools::install_github("CenterForPeaceAndSecurityStudies/rDMC")
 
 ## Important files
 ### Paper
-Planes, Trains, and Armored Mobiles: Introducing a Dataset of the Global Distribution of Military Capabilities (rDMC) [pdf](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/paper/2021-09-24_rDMC.pdf), [html](https://htmlpreview.github.io/?https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/paper/2021-09-24_rDMC.nb.html)
+Planes, Trains, and Armored Mobiles: Introducing a Dataset of the Global Distribution of Military Capabilities (rDMC) [pdf](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/paper/rDMC_preprint.pdf)
 
 ### Tabular Data
 rDMC raw - [csv](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/rDMC_raw.csv), [rds](https://github.com/CenterForPeaceAndSecurityStudies/rDMC/blob/main/data/01z_rDMC_raw.rds)
