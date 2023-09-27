@@ -2,7 +2,7 @@
 
 The rDMC github repository contains all the data and code necessary to reproduce and replicate the rDMC dataset and accompanying paper. The repository, data, and article are produced by [J Andres Gannon](https://jandresgannon.com/).
 
-Gannon, J Andrés. “Planes, Trains, and Armored Mobiles: Introducing a Dataset of the Global Distribution of Military Capabilities (rDMC).” _International Studies Quarterly_ 0(0) (2023). https://doi.org/10.2139/ssrn.3930390.
+Gannon, J Andrés. [“Planes, Trains, and Armored Mobiles: Introducing a Dataset of the Global Distribution of Military Capabilities.”](https://academic.oup.com/isq/article/doi/10.1093/isq/sqad081/7284156) _International Studies Quarterly_ 67(4) (2023). [https://doi.org/10.2139/ssrn.3930390](https://doi.org/10.1093/isq/sqad081).
 
 ## Installation
 
